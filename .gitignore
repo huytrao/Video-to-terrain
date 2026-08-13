@@ -1,0 +1,33 @@
+# Secrets — NEVER commit
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ClaudeKit / Claude local
+.claude/local/
+
+# Pipeline outputs (heavy artifacts)
+outputs/
+*.ply
+*.npy
+# keep scene_mesh/point_cloud only if under tracked samples/
+
+# macOS
+.DS_Store
+
+# Node
+node_modules/
+
+# Logs
+*.log
