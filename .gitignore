@@ -31,3 +31,17 @@ node_modules/
 
 # Logs
 *.log
+
+# depth-anything-3 vendored repo: only ship the installable package
+# (src/, pyproject.toml, requirements.txt) - these are gradio demo /
+# docs / media cruft, not needed for `pip install -e depth-anything-3`
+# and dominate the repo size (~2GB, mostly a nested venv + assets).
+depth-anything-3/depth-anything-3-space/
+depth-anything-3/assets/
+depth-anything-3/reference/
+depth-anything-3/notebooks/
+depth-anything-3/.venv/
+depth-anything-3/__pycache__/
+
+# Kaggle proxy URL cache (short-lived, machine-specific)
+.kaggle_proxy_url_cache
