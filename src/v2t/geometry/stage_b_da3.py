@@ -13,9 +13,11 @@ from src.v2t.geometry.da3_error_handler import (
     process_point_cloud_chunked, ErrorType
 )
 
-# Import local DA3
+# Import local DA3 (vendored under <project_root>/depth-anything-3, portable
+# across machines/Kaggle instead of a hardcoded absolute dev path)
 import sys
-DA3_REPO = Path("/Users/traoanhuy/source_code/Full-pipeline-scan-terrain/depth-anything-3/src")
+_PROJECT_ROOT = Path(__file__).resolve().parents[3]
+DA3_REPO = _PROJECT_ROOT / "depth-anything-3" / "src"
 if str(DA3_REPO) not in sys.path:
     sys.path.insert(0, str(DA3_REPO))
 
