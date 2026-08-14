@@ -84,14 +84,15 @@ class PipelineConfig:
         return Paths(self.run_dir)
 
     # Frame extraction
-    # DA3 runs joint multi-view attention over ALL sampled frames at once, so
-    # GPU memory scales ~quadratically with frame count (112 frames OOM'd a
-    # 15GB T4 needing 47GB, regardless of process_res - resolution barely
-    # matters here). rate=11 gives ~51 frames over the full clip: still spans
-    # the whole 360deg walk-around (unlike the old rate=5/max_frames=100
-    # combo, which truncated the last ~4.2s) but fits GPU memory.
-    frame_sample_rate: int = 11
-    max_frames: int = 130  # generous cap; ~51 frames actually get sampled at rate=11
+    # DA3 runs joint multi-view (global camera-token) attention over ALL
+    # sampled frames at once - memory scales with frame count roughly
+    # linearly-to-quadratically and is largely independent of process_res
+    # (measured: 112 frames needs ~47GB, 51 frames needs ~22GB on a 15GB T4).
+    # rate=22 gives ~25 frames, with margin to fit, while still spanning the
+    # whole clip (unlike the old rate=5/max_frames=100 combo, which
+    # truncated the last ~4.2s of the 360deg walk-around).
+    frame_sample_rate: int = 22
+    max_frames: int = 130  # generous cap; ~25 frames actually get sampled at rate=22
 
     # DA3
     da3_model: str = "da3-large"  # non-metric with camera decoder for poses
