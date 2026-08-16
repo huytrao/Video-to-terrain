@@ -190,12 +190,23 @@ assemble = """
 import os, shutil, tarfile
 parts = {parts!r}
 dest = {dest!r}
+expected = {total}
 os.makedirs(os.path.dirname(dest) or '.', exist_ok=True)
+
+missing = [p for p in parts if not os.path.exists(os.path.join('/kaggle/working', p))]
+if missing:
+    raise SystemExit('MISSING %d part(s): %s' % (len(missing), missing[:5]))
+
 with open(dest, 'wb') as out:
     for p in parts:
         with open(os.path.join('/kaggle/working', p), 'rb') as f:
             shutil.copyfileobj(f, out, length=16*1024*1024)
-print('assembled', os.path.getsize(dest), 'expected', {total})
+
+got = os.path.getsize(dest)
+print('assembled', got, 'expected', expected)
+if got != expected:
+    raise SystemExit('SIZE MISMATCH: short by %d bytes across %d parts' % (expected - got, len(parts)))
+
 shutil.rmtree(os.path.join('/kaggle/working', {parts_dir!r}), ignore_errors=True)
 extract_to = {extract!r}
 if extract_to:
@@ -203,6 +214,7 @@ if extract_to:
     with tarfile.open(dest) as tf:
         tf.extractall(extract_to)
     print('extracted to', extract_to, '->', len(os.listdir(extract_to)), 'entries')
+print('RELAY_PUSH_OK')
 """.format(parts=ordered, dest=DEST, total=TOTAL, parts_dir=PARTS_DIR, extract=EXTRACT_TO or None)
 
 print(exec_on(assemble))
@@ -224,7 +236,9 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--dest", required=True, help="absolute destination path on notebook B")
     p.add_argument("--extract-to", default="", help="if set, untar the file into this directory on B")
     p.add_argument("--workers", type=int, default=4)
-    p.add_argument("--subchunk", type=int, default=24, help="MB per Contents-API PUT")
+    p.add_argument("--subchunk", type=int, default=8,
+               help="MB per Contents-API PUT. Kaggle silently truncates PUTs around
+                    24 MB, and this reads exact-size blocks, so keep it well under.")
     p.add_argument("--timeout", type=int, default=9000)
     args = p.parse_args(argv)
 
@@ -245,11 +259,13 @@ def main(argv: list[str] | None = None) -> None:
         remote = f"_relay/push_{os.getpid()}.py"
         ex.upload_file(str(tmp), remote)
         print(f"Pushing {args.src} -> {args.dest}\n")
-        ex.execute(
+        output = ex.execute(
             ex.get_or_create_kernel(),
             f"exec(open('/kaggle/working/{remote}').read())",
             timeout=args.timeout,
-        )
+        ) or ""
+        if "RELAY_PUSH_OK" not in output:
+            sys.exit("relay_push failed: destination was not verified on the receiving kernel")
     finally:
         tmp.unlink(missing_ok=True)
 
