@@ -33,6 +33,17 @@ IMPORT_PATHS = (Path("/kaggle/working"), Path("/kaggle/working/depth_anything_3"
 # The literal in inference_da3_scannetppv2.py that reaches for the network.
 DA3_REPO_ID = "depth-anything/DA3NESTED-GIANT-LARGE"
 
+# PGSR's ScanNet++ reader falls back to an absolute path from the authors'
+# machine when no --ply_path is given. render.py has no such flag, so this one
+# must be fixed at the source. The repository already does the right thing in
+# readScannetV2SceneInfo — derive the cloud from the scene — and this makes the
+# ScanNet++ reader agree with it. `path` there is <scene>/dslr/nerfstudio, so
+# the DA3 cloud sits two levels up.
+STALE_PLY_FALLBACK = '    ply_path = "output_scannet/scannetppv2/0b031f3119/input.ply"'
+DERIVED_PLY_FALLBACK = (
+    '    ply_path = os.path.join(path, "..", "..", "pointcloud_da3.ply")  # v3d: was an absolute path from the authors\' machine'
+)
+
 
 @dataclass
 class Patch:
@@ -43,18 +54,20 @@ class Patch:
 
 
 def apply_offline_patches(paper_root: Path = PAPER_ROOT, da3_model: Path = DA3_MODEL) -> list[Patch]:
-    """Point the one hardcoded repo id at a local directory. Idempotent."""
-    target = paper_root / "inference_da3_scannetppv2.py"
-    text = target.read_text()
+    """Replace the two paths that only existed on the authors' machine. Idempotent."""
     patches: list[Patch] = []
 
-    if DA3_REPO_ID in text:
-        patched = text.replace(f'"{DA3_REPO_ID}"', f'"{da3_model}"')
-        target.write_text(patched)
-        patches.append(Patch(target, DA3_REPO_ID, str(da3_model), applied=True))
-    else:
-        patches.append(Patch(target, DA3_REPO_ID, str(da3_model), applied=False))
+    def swap(rel: str, before: str, after: str) -> None:
+        target = paper_root / rel
+        text = target.read_text()
+        if before in text:
+            target.write_text(text.replace(before, after))
+            patches.append(Patch(target, before, after, applied=True))
+        else:
+            patches.append(Patch(target, before, after, applied=False))
 
+    swap("inference_da3_scannetppv2.py", f'"{DA3_REPO_ID}"', f'"{da3_model}"')
+    swap("PGSR/scene/dataset_readers.py", STALE_PLY_FALLBACK, DERIVED_PLY_FALLBACK)
     return patches
 
 
@@ -129,6 +142,62 @@ def stage_pgsr(
     )
 
 
+# mesh.sh defaults, kept identical so the surface matches the paper's.
+RENDER_MAX_DEPTH = "4.0"
+MASK_MAX_DEPTH = "6.0"
+VOXEL_SIZE = "0.006"
+NUM_CLUSTER = "1"
+MESH_PATH_REL = "mesh/tsdf_fusion_post.ply"
+
+
+def stage_mesh(
+    scene_id: str,
+    paper_root: Path = PAPER_ROOT,
+    data_root: Path = DATA_ROOT,
+    output_root: Path = WORK_ROOT / "gs",
+) -> int:
+    """TSDF-fuse the trained gaussians into a mesh, then render mesh-guided masks.
+
+    Two calls, matching mesh.sh: render.py writes mesh/tsdf_fusion_post.ply,
+    and mesh2mask.py turns it into the per-frame masks the lifting stage
+    consumes.
+    """
+    scene_dir = data_root / scene_id
+    source = scene_dir / "dslr" / "nerfstudio"
+    images = scene_dir / "dslr" / "resized_undistorted_images"
+    model_dir = output_root / scene_id
+
+    if not (model_dir / "point_cloud").is_dir():
+        raise FileNotFoundError(f"run stage_pgsr first: no gaussians under {model_dir}")
+
+    rc = _run(
+        [sys.executable, "PGSR/render.py",
+         "-s", str(source), "-m", str(model_dir), "-i", str(images),
+         "--skip_test",
+         "--max_depth", RENDER_MAX_DEPTH,
+         "--voxel_size", VOXEL_SIZE,
+         "--num_cluster", NUM_CLUSTER],
+        cwd=paper_root,
+        log=WORK_ROOT / "logs" / f"{scene_id}_render.log",
+    )
+    if rc != 0:
+        return rc
+
+    mesh = model_dir / MESH_PATH_REL
+    if not mesh.exists():
+        raise FileNotFoundError(f"render.py reported success but {mesh} is absent")
+
+    return _run(
+        [sys.executable, "PGSR/mesh2mask.py",
+         "-m", str(model_dir), "-s", str(source), "-i", str(images),
+         "--mesh_path", MESH_PATH_REL,
+         "--max_depth", MASK_MAX_DEPTH,
+         "--voxel_size", VOXEL_SIZE],
+        cwd=paper_root,
+        log=WORK_ROOT / "logs" / f"{scene_id}_mesh2mask.log",
+    )
+
+
 def da3_outputs(scene_id: str, data_root: Path = DATA_ROOT) -> dict[str, Path]:
     scene = data_root / scene_id
     return {
@@ -154,7 +223,7 @@ def main(argv: list[str] | None = None) -> int:
 
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("scene")
-    ap.add_argument("--stage", default="da3", choices=["patch", "da3", "pgsr", "report"])
+    ap.add_argument("--stage", default="da3", choices=["patch", "da3", "pgsr", "mesh", "report"])
     ap.add_argument("--paper-root", type=Path, default=PAPER_ROOT)
     ap.add_argument("--data-root", type=Path, default=DATA_ROOT)
     ap.add_argument("--da3-model", type=Path, default=DA3_MODEL)
@@ -174,6 +243,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.stage == "pgsr":
         rc = stage_pgsr(args.scene, args.paper_root, args.data_root)
         print(f"  PGSR exit code {rc}")
+        return rc
+
+    if args.stage == "mesh":
+        rc = stage_mesh(args.scene, args.paper_root, args.data_root)
+        print(f"  mesh exit code {rc}")
         return rc
 
     if args.stage == "report":
