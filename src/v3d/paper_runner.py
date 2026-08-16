@@ -90,6 +90,35 @@ def stage_da3(scene_id: str, paper_root: Path = PAPER_ROOT, data_root: Path = DA
     )
 
 
+def stage_pgsr(
+    scene_id: str,
+    paper_root: Path = PAPER_ROOT,
+    data_root: Path = DATA_ROOT,
+    output_root: Path = WORK_ROOT / "gs",
+) -> int:
+    """PGSR / 3DGS training — the stage that produces surface quality.
+
+    Arguments mirror 3dgs_train.sh's ScanNet++ branch exactly: the nerfstudio
+    directory as the source, the undistorted images alongside it, resolution 1.
+    """
+    scene_dir = data_root / scene_id
+    source = scene_dir / "dslr" / "nerfstudio"
+    images = scene_dir / "dslr" / "resized_undistorted_images"
+    if not (source / "transforms_undistorted.json").exists():
+        raise FileNotFoundError(f"no transforms_undistorted.json under {source}")
+
+    output_root.mkdir(parents=True, exist_ok=True)
+    return _run(
+        [sys.executable, "PGSR/train.py",
+         "-s", str(source),
+         "-i", str(images),
+         "-m", str(output_root / scene_id),
+         "--resolution", "1"],
+        cwd=paper_root,
+        log=WORK_ROOT / "logs" / f"{scene_id}_pgsr.log",
+    )
+
+
 def da3_outputs(scene_id: str, data_root: Path = DATA_ROOT) -> dict[str, Path]:
     scene = data_root / scene_id
     return {
@@ -115,7 +144,7 @@ def main(argv: list[str] | None = None) -> int:
 
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("scene")
-    ap.add_argument("--stage", default="da3", choices=["patch", "da3", "report"])
+    ap.add_argument("--stage", default="da3", choices=["patch", "da3", "pgsr", "report"])
     ap.add_argument("--paper-root", type=Path, default=PAPER_ROOT)
     ap.add_argument("--data-root", type=Path, default=DATA_ROOT)
     ap.add_argument("--da3-model", type=Path, default=DA3_MODEL)
@@ -130,6 +159,11 @@ def main(argv: list[str] | None = None) -> int:
         rc = stage_da3(args.scene, args.paper_root, args.data_root)
         print(f"  DA3 exit code {rc}")
         print(f"  {stage_report(args.scene, args.data_root)}")
+        return rc
+
+    if args.stage == "pgsr":
+        rc = stage_pgsr(args.scene, args.paper_root, args.data_root)
+        print(f"  PGSR exit code {rc}")
         return rc
 
     if args.stage == "report":
