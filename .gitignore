@@ -2,6 +2,9 @@
 .env
 .env.*
 !.env.example
+# holds a plaintext Kaggle API key
+kaggle_upload_example.py
+**/kaggle.json
 
 # Python
 __pycache__/
