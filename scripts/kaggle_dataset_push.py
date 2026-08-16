@@ -56,6 +56,11 @@ def push(
     """Create the dataset, or add a version if it already exists."""
     if not source.is_dir():
         raise NotADirectoryError(f"{source} is not a directory")
+    # Kaggle rejects these after the upload has already been prepared, so check first.
+    if not 6 <= len(title) <= 50:
+        raise ValueError(f"title must be 6-50 characters, got {len(title)}: {title!r}")
+    if slug != slug.lower() or " " in slug:
+        raise ValueError(f"slug must be lowercase without spaces: {slug!r}")
 
     files = [p for p in source.rglob("*") if p.is_file()]
     total = sum(p.stat().st_size for p in files)
