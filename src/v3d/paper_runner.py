@@ -198,7 +198,7 @@ def stage_vlm(
         images = [images[i] for i in idx]
 
     labeler = VLMLabeler(cfg.vlm_model)
-    results, vocabulary = labeler.label_scene(images)
+    results, vocabulary, merges = labeler.label_scene(images)
 
     out = cfg.work_root / "scene_objects" / f"{layout.scene_id}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -207,10 +207,15 @@ def stage_vlm(
             "scene": layout.scene_id,
             "per_image": {Path(r.image).name: r.labels for r in results},
             "vocabulary": vocabulary,
+            "merged_specialisations": merges,
         },
         indent=2,
     ))
     print(f"  {len(results)} frames labelled, {len(vocabulary)} distinct classes -> {out}")
+    if merges:
+        print(f"  folded {len(merges)} specialisations into their base class:")
+        for k, v in sorted(merges.items())[:15]:
+            print(f"    {k!r} -> {v!r}")
     return 0
 
 
