@@ -52,28 +52,42 @@ PROMPT_TEMPLATE = (
 BANNED = frozenset({"object", "thing", "stuff", "unknown", "none", ""})
 
 
-def consolidate(label: str, vocabulary: Sequence[str]) -> str:
-    """Collapse a label onto an established base class, per the prompt's own rule.
+# Colours are never object classes. The prompt forbids them outright ("do NOT
+# add quantity, shape, material, state, or descriptive modifiers"), but the
+# model emitted a bare "green" on the workshop scene, and one bare modifier in
+# the vocabulary is enough to start swallowing real classes.
+COLOURS = frozenset({
+    "green", "blue", "red", "yellow", "white", "black", "grey", "gray",
+    "brown", "orange", "purple", "pink", "beige", "silver", "gold",
+})
 
-    The prompt tells the model to use the base noun with no material, shape or
-    state modifiers, and to reuse an existing label whenever the meaning
-    matches. On a workshop scene it obeyed for 140 frames and then drifted:
-    ``wood`` spawned ``wood panel``, ``wood composite board``, ``wood
-    particleboard``, ``wood sawdust`` and twenty-two more. Each variant then
-    entered the carried-forward vocabulary, where the "reuse previous labels"
-    instruction *reinforced* it — 26 of 58 classes ended up as elaborations of
-    one material.
 
-    Left alone that reaches SAM3 as twenty-six near-identical text prompts over
-    the same pile of lumber, and lift3d as twenty-six overlapping boxes.
+def consolidate(label: str, vocabulary: Sequence[str]) -> str | None:
+    """Reduce a label to its head noun, or drop it if it names no object.
 
-    So when a label begins with a vocabulary term already established, it is a
-    specialisation of that term and is folded back into it. This enforces the
-    instruction rather than departing from it.
+    The prompt asks for the base class noun with no material, shape, state or
+    colour modifiers, and for an existing label to be reused when the meaning
+    matches. On the workshop scene the model held that for about 140 frames and
+    then drifted, and because the vocabulary is carried into every later prompt
+    the drift compounded: 26 of 58 classes became elaborations of ``wood``.
+
+    In English the head noun is the **last** word — "green barrel" is a barrel,
+    "wood board" is a board, "plastic bag" is a bag. So a multi-word label folds
+    onto its final word when that word is already an established class. Folding
+    on the *first* word instead does the opposite of what is wanted: it keeps
+    the modifier and discards the object, which turned nine real classes
+    (barrel, bench, bucket, cabinet, container, drum, floor, machine, stool)
+    into the single colour "green".
+
+    Returns None for a label that is only a colour, which should never have
+    been a class at all.
     """
-    for base in vocabulary:
-        if label != base and label.startswith(base + " "):
-            return base
+    if label in COLOURS:
+        return None
+
+    words = label.split()
+    if len(words) > 1 and words[-1] in vocabulary:
+        return words[-1]
     return label
 
 
@@ -170,6 +184,9 @@ class VLMLabeler:
             kept: list[str] = []
             for label in res.labels:
                 final = consolidate(label, vocabulary) if merge_specialisations else label
+                if final is None:
+                    merges[label] = "<dropped: colour, not an object>"
+                    continue
                 if final != label:
                     merges[label] = final
                 if final not in kept:
