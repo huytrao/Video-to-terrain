@@ -137,6 +137,43 @@ def parse_labels(text: str, cap: int = 60) -> list[str]:
     return out
 
 
+def consolidate_final(
+    results: list["FrameLabels"], vocabulary: list[str]
+) -> tuple[list[str], dict[str, str]]:
+    """One more pass once the whole vocabulary is known.
+
+    Consolidation during the run can only fold onto classes established *so
+    far*, so a variant that arrives before its base is stuck: "trash bin"
+    appeared before "bin" did, and survived alongside it. Repeating the fold
+    against the finished vocabulary catches those, and iterating settles chains
+    like "trash can" -> "trash" where the target is itself later folded.
+
+    Rewrites the per-frame labels in place so the saved document and the
+    vocabulary cannot disagree.
+    """
+    merges: dict[str, str] = {}
+
+    for _ in range(4):  # converges immediately in practice; bounded regardless
+        mapping = {}
+        for label in vocabulary:
+            target = consolidate(label, [v for v in vocabulary if v != label])
+            if target is not None and target != label:
+                mapping[label] = target
+        if not mapping:
+            break
+        merges.update(mapping)
+        vocabulary = [v for v in vocabulary if v not in mapping]
+        for res in results:
+            seen: list[str] = []
+            for label in res.labels:
+                final = mapping.get(label, label)
+                if final not in seen:
+                    seen.append(final)
+            res.labels = seen
+
+    return vocabulary, merges
+
+
 class VLMLabeler:
     """Loads the checkpoint once and labels frames one at a time."""
 
@@ -209,5 +246,9 @@ class VLMLabeler:
                     vocabulary.append(final)
             res.labels = kept
             results.append(res)
+
+        if merge_specialisations:
+            vocabulary, extra = consolidate_final(results, vocabulary)
+            merges.update(extra)
 
         return results, vocabulary, merges
