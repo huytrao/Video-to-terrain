@@ -171,6 +171,72 @@ def stage_mesh(scene: str | SceneLayout, cfg: PipelineConfig | None = None) -> i
     )
 
 
+def stage_vlm(
+    scene: str | SceneLayout,
+    cfg: PipelineConfig | None = None,
+    max_images: int | None = None,
+) -> int:
+    """Discover the class vocabulary, in-process instead of against a vLLM server.
+
+    Writes the `{scene, per_image}` document sam3.py's ``load_scene_json``
+    expects, so the paper's next stage consumes it unchanged.
+    """
+    import json
+
+    from v3d.semantic.vlm import VLMLabeler
+
+    cfg = cfg or PipelineConfig()
+    layout = _layout(scene, cfg)
+    images = sorted(p for p in layout.images_dir.iterdir() if p.suffix.lower() in
+                    {".jpg", ".jpeg", ".png"})
+    if not images:
+        raise FileNotFoundError(f"no frames in {layout.images_dir}")
+
+    if max_images and len(images) > max_images:
+        # even sampling, as classic_vllm.collect_images does
+        idx = sorted({round(i * (len(images) - 1) / (max_images - 1)) for i in range(max_images)})
+        images = [images[i] for i in idx]
+
+    labeler = VLMLabeler(cfg.vlm_model)
+    results, vocabulary = labeler.label_scene(images)
+
+    out = cfg.work_root / "scene_objects" / f"{layout.scene_id}.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(
+        {
+            "scene": layout.scene_id,
+            "per_image": {Path(r.image).name: r.labels for r in results},
+            "vocabulary": vocabulary,
+        },
+        indent=2,
+    ))
+    print(f"  {len(results)} frames labelled, {len(vocabulary)} distinct classes -> {out}")
+    return 0
+
+
+def vlm_output(scene_id: str, cfg: PipelineConfig) -> Path:
+    return cfg.work_root / "scene_objects" / f"{scene_id}.json"
+
+
+def stage_sam3(scene: str | SceneLayout, cfg: PipelineConfig | None = None) -> int:
+    """Text-prompted masks for the discovered classes."""
+    cfg = cfg or PipelineConfig()
+    layout = _layout(scene, cfg)
+    scene_json = vlm_output(layout.scene_id, cfg)
+    if not scene_json.exists():
+        raise FileNotFoundError(f"run stage_vlm first: {scene_json} is missing")
+
+    return _run(
+        [sys.executable, "sam3.py",
+         "--data-root", str(cfg.data_root),
+         "--scene-json", str(scene_json),
+         "--output-dir", str(cfg.work_root / "sam_masks" / layout.scene_id),
+         "--sam3-checkpoint", str(cfg.sam3_checkpoint)],
+        cfg,
+        f"{layout.scene_id}_sam3.log",
+    )
+
+
 def stage_report(scene: str | SceneLayout, cfg: PipelineConfig | None = None) -> dict[str, object]:
     """What exists so far, so a stage can be resumed rather than repeated."""
     cfg = cfg or PipelineConfig()
@@ -188,10 +254,12 @@ def stage_report(scene: str | SceneLayout, cfg: PipelineConfig | None = None) ->
         "point_cloud_mb": mb(layout.point_cloud),
         "mesh_mb": mb(mesh),
         "masks": len(list(layout.mask_dir.glob("*"))) if layout.mask_dir.is_dir() else 0,
+        "vlm_labels": vlm_output(layout.scene_id, cfg).exists(),
     }
 
 
-STAGES = {"da3": stage_da3, "pgsr": stage_pgsr, "mesh": stage_mesh}
+STAGES = {"da3": stage_da3, "pgsr": stage_pgsr, "mesh": stage_mesh,
+          "vlm": stage_vlm, "sam3": stage_sam3}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -200,7 +268,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("scene")
     ap.add_argument("--stage", default="report",
-                    choices=["patch", "da3", "pgsr", "mesh", "all", "report"])
+                    choices=["patch", "da3", "pgsr", "mesh", "vlm", "sam3", "all", "report"])
     ap.add_argument("--paper-root", type=Path)
     ap.add_argument("--data-root", type=Path)
     ap.add_argument("--work-root", type=Path)
@@ -215,7 +283,7 @@ def main(argv: list[str] | None = None) -> int:
         for p in apply_offline_patches(cfg):
             print(f"  {p.path.name}: {'patched' if p.applied else 'already local'}")
 
-    order = ["da3", "pgsr", "mesh"] if args.stage == "all" else [args.stage]
+    order = ["da3", "pgsr", "mesh", "vlm", "sam3"] if args.stage == "all" else [args.stage]
     for name in order:
         if name not in STAGES:
             continue
