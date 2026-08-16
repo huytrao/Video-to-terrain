@@ -33,6 +33,12 @@ from v3d.validate.gt_boxes import GTBox, load_gt, room_dims_from_gt  # noqa: E40
 DEFAULT_TOL_M = 0.05
 MATCH_RADIUS_M = 1.0
 
+# Size bands for reporting. A fixed 5 cm tolerance is 2% of a 2.5 m door and
+# 80% of a 6 cm cord, and the ScanNet++ annotations are full of the latter —
+# stickers, labels, cords, panels. Banding keeps that visible rather than
+# letting hundreds of trivially-passed fragments hide a wrong wall.
+SIZE_BANDS = (("tiny", 0.0, 0.3), ("small", 0.3, 1.0), ("large", 1.0, float("inf")))
+
 # Plausibility bounds for an indoor room. Not a substitute for ground truth —
 # these only catch results that cannot be true of any real room.
 CEILING_RANGE_M = (2.0, 3.5)
@@ -81,6 +87,17 @@ class StageJReport:
 
     def room_error_lines(self) -> list[tuple[str, float]]:
         return sorted(self.room_errors.items(), key=lambda kv: -kv[1])
+
+    def size_band_summary(self) -> list[tuple[str, int, int, int, float | None]]:
+        """Per band: (name, ground-truth count, matched, over tolerance, worst error)."""
+        rows = []
+        for name, lo, hi in SIZE_BANDS:
+            in_band = [e for e in self.object_errors if lo <= max(e.gt_size) < hi]
+            matched = [e for e in in_band if e.matched]
+            over = [e for e in matched if (e.size_error_m or 0.0) > self.tol_m]
+            worst = max((e.size_error_m or 0.0) for e in matched) if matched else None
+            rows.append((name, len(in_band), len(matched), len(over), worst))
+        return rows
 
     def to_dict(self) -> dict:
         d = asdict(self)
@@ -225,7 +242,15 @@ def run(
     scene_path: str | Path,
     gt_path: str | Path | None = None,
     tol_m: float = DEFAULT_TOL_M,
+    min_size_m: float = 0.0,
 ) -> StageJReport:
+    """Grade a scene.
+
+    ``min_size_m`` restricts the metric gate to ground-truth objects whose
+    largest dimension reaches it. Zero — the default — gates everything, which
+    is what was asked for; raising it is a deliberate, recorded choice, and
+    excluded objects still appear in the size-band summary.
+    """
     scene = SceneDocument.read(scene_path)
     report = StageJReport(scene_id=scene.scene_id, tol_m=tol_m)
 
@@ -244,12 +269,14 @@ def run(
     total = len(report.object_errors)
     report.recall = (len(matched) / total) if total else None
 
-    over_tol = [e for e in matched if (e.size_error_m or 0.0) > tol_m]
+    gated = [e for e in matched if max(e.gt_size) >= min_size_m]
+    over_tol = [e for e in gated if (e.size_error_m or 0.0) > tol_m]
+    scope = "" if min_size_m <= 0 else f" (gating objects >= {min_size_m*100:.0f} cm)"
     report.checks.append(
         Check(
             "object_size_within_tol",
             "PASS" if not over_tol else "FAIL",
-            f"{len(matched)}/{total} matched; {len(over_tol)} over {tol_m*100:.0f} cm"
+            f"{len(matched)}/{total} matched{scope}; {len(over_tol)} over {tol_m*100:.0f} cm"
             + (
                 ""
                 if not over_tol
@@ -295,15 +322,24 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("scene", help="path to scene.json")
     ap.add_argument("--gt", help="Holi-Spatial ground-truth box json for this scene")
     ap.add_argument("--tol", type=float, default=DEFAULT_TOL_M, help="tolerance in metres")
+    ap.add_argument("--min-size", type=float, default=0.0,
+                    help="only gate ground-truth objects at least this large (metres)")
     ap.add_argument("--out", help="write the report json here")
     args = ap.parse_args(argv)
 
-    report = run(args.scene, args.gt, args.tol)
+    report = run(args.scene, args.gt, args.tol, args.min_size)
 
     width = max((len(c.id) for c in report.checks), default=10)
     for c in report.checks:
         mark = {"PASS": "PASS", "FAIL": "FAIL", "SKIP": "SKIP"}[c.status]
         print(f"  [{mark}] {c.id.ljust(width)}  {c.detail}")
+
+    if report.object_errors:
+        print("\n  by object size:")
+        print(f"    {'band':<8}{'in GT':>7}{'matched':>9}{'over tol':>10}{'worst':>10}")
+        for name, n_gt, n_matched, n_over, worst in report.size_band_summary():
+            w = f"{worst*100:.1f}cm" if worst is not None else "-"
+            print(f"    {name:<8}{n_gt:>7}{n_matched:>9}{n_over:>10}{w:>10}")
     if report.recall is not None:
         print(f"\n  recall: {report.recall*100:.1f}% of ground-truth objects matched")
     print(f"\n  structural: {report.structural_verdict}   metric: {report.metric_verdict}")
