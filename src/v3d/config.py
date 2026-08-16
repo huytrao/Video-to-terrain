@@ -42,7 +42,7 @@ class PipelineConfig:
         default_factory=lambda: tuple(
             Path(p) for p in os.environ.get(
                 "V3D_IMPORT_PATHS",
-                "/kaggle/working:/kaggle/working/depth_anything_3",
+                "/kaggle/working:/kaggle/working/depth_anything_3:/tmp/nvd/nvd/nvdiffrast",
             ).split(os.pathsep) if p
         )
     )
