@@ -107,12 +107,22 @@ def stage_pgsr(
     if not (source / "transforms_undistorted.json").exists():
         raise FileNotFoundError(f"no transforms_undistorted.json under {source}")
 
+    # 3dgs_train.sh omits --ply_path, and dataset_readers.readNerfSyntheticInfo
+    # then falls back to a path left over from the authors' machine
+    # ("output_scannet/scannetppv2/0b031f3119/input.ply"), which does not exist
+    # and takes the run down. The paper initialises 3DGS from the DA3 cloud, so
+    # point it there — that is what the fallback was standing in for.
+    init_cloud = da3_outputs(scene_id, data_root)["point_cloud"]
+    if not init_cloud.exists():
+        raise FileNotFoundError(f"run stage_da3 first: {init_cloud} is missing")
+
     output_root.mkdir(parents=True, exist_ok=True)
     return _run(
         [sys.executable, "PGSR/train.py",
          "-s", str(source),
          "-i", str(images),
          "-m", str(output_root / scene_id),
+         "--ply_path", str(init_cloud),
          "--resolution", "1"],
         cwd=paper_root,
         log=WORK_ROOT / "logs" / f"{scene_id}_pgsr.log",
