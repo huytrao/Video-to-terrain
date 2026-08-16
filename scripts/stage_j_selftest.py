@@ -24,106 +24,34 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from v3d.data.hf_tar import RemoteTar, hf_url  # noqa: E402
-from v3d.scene.schema import (  # noqa: E402
-    Ceiling,
-    Floor,
-    OrientedBox,
-    Plane,
-    Room,
-    SceneDocument,
-    SceneObject,
-    Wall,
-)
+from v3d.scene.from_holi import build_scene  # noqa: E402
+from v3d.scene.schema import OrientedBox, SceneDocument, SceneObject  # noqa: E402
 from v3d.validate import stage_j  # noqa: E402
-from v3d.validate.gt_boxes import load_gt, room_dims_from_gt  # noqa: E402
 
 GT_TAR = hf_url("Holi-Spatial/ScanNetPP", "3d_bounding_box_pp/3d_bounding_box.tar")
 CACHE = ROOT / "outputs" / "_selftest"
+GT_CACHE = CACHE / "gt"
 
 
 def fetch_one_gt() -> tuple[str, Path]:
-    CACHE.mkdir(parents=True, exist_ok=True)
-    hit = next(iter(CACHE.glob("*.json")), None)
+    """One real annotation, cached — the tar it comes from is 6.65 GB."""
+    GT_CACHE.mkdir(parents=True, exist_ok=True)
+    hit = next(iter(GT_CACHE.glob("*.json")), None)
     if hit is not None:
         return hit.stem, hit
 
     tar = RemoteTar(GT_TAR)
     member = next(m for m in itertools.islice(tar.members(), 6) if m.name.endswith(".json"))
     scene_id = Path(member.name).stem
-    dest = CACHE / f"{scene_id}.json"
+    dest = GT_CACHE / f"{scene_id}.json"
     tar.extract(member, dest)
     return scene_id, dest
 
 
-def build_honest(scene_id: str, gt_path: Path) -> SceneDocument:
-    """A scene that agrees with the ground truth, with honest provenance."""
-    gt = load_gt(gt_path)
-    dims = room_dims_from_gt(gt)
-    up = int(dims.get("up_axis_index", 2))
-    horiz = [i for i in range(3) if i != up]
-
-    shell = [b for b in gt if b.is_shell]
-    corners = []
-    for b in shell:
-        half = (b.axes.T * (b.size / 2.0)).T
-        for s in itertools.product((-1, 1), repeat=3):
-            corners.append(b.center + s[0] * half[0] + s[1] * half[1] + s[2] * half[2])
-    pts = np.array(corners)
-    lo, hi = pts.min(axis=0), pts.max(axis=0)
-
-    poly = [
-        [float(lo[horiz[0]]), float(lo[horiz[1]])],
-        [float(hi[horiz[0]]), float(lo[horiz[1]])],
-        [float(hi[horiz[0]]), float(hi[horiz[1]])],
-        [float(lo[horiz[0]]), float(hi[horiz[1]])],
-    ]
-    height = float(dims.get("height_m", 2.6))
-
-    room = Room(
-        floor=Floor(
-            plane=Plane([0.0, 0.0, 1.0, 0.0], source="measured", inlier_count=48210, rms_residual_m=0.004),
-            polygon_xy=poly,
-            source="measured",
-        ),
-        ceiling=Ceiling(
-            height_m=height,
-            plane=Plane([0.0, 0.0, 1.0, -height], source="measured", inlier_count=31044),
-            source="measured",
-        ),
-        walls=[
-            Wall(
-                plane=Plane([1.0, 0.0, 0.0, -poly[1][0]], source="measured", inlier_count=9021),
-                footprint_xy=[poly[1], poly[2]],
-                z_range_m=[0.0, height],
-                source="measured",
-            )
-        ],
-    )
-
-    objects = []
-    for b in gt:
-        if b.is_shell:
-            continue
-        objects.append(
-            SceneObject(
-                id=f"obj_{b.label.replace(' ', '_')}_{b.ins_id}",
-                category=b.label,
-                box=OrientedBox(
-                    center=[float(v) for v in b.center],
-                    size=[float(v) for v in b.size],
-                    rotation=[[float(v) for v in row] for row in b.axes],
-                    source="measured",
-                ),
-                confidence=0.95,
-            )
-        )
-
-    return SceneDocument(
-        scene_id=scene_id,
-        room=room,
-        objects=objects,
-        provenance={"pipeline": "selftest-honest"},
-    )
+def build_honest(scene_id: str, gt_path) -> SceneDocument:
+    """The production converter, run on the ground truth itself."""
+    doc = build_scene(scene_id, gt_path, pipeline="selftest-honest")
+    return doc
 
 
 def build_buggy(honest: SceneDocument) -> SceneDocument:
