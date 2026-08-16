@@ -75,8 +75,27 @@ class Room:
         return self.ceiling.height_m
 
     def footprint_extent_m(self) -> tuple[float, float]:
-        xs = [p[0] for p in self.floor.polygon_xy]
-        ys = [p[1] for p in self.floor.polygon_xy]
+        """The room's own length and width, independent of world orientation.
+
+        A footprint is a polygon, and its dimensions are edge lengths. Taking
+        the span along the world axes instead inflates every room that is not
+        aligned to them — which is every real room — and would fail a correct
+        reconstruction purely for being rotated.
+        """
+        poly = self.floor.polygon_xy
+        if len(poly) == 4:
+            edges = [
+                float(
+                    ((poly[i][0] - poly[(i + 1) % 4][0]) ** 2
+                     + (poly[i][1] - poly[(i + 1) % 4][1]) ** 2) ** 0.5
+                )
+                for i in range(4)
+            ]
+            a, b = max(edges[0], edges[1]), min(edges[0], edges[1])
+            return (a, b)
+
+        xs = [p[0] for p in poly]
+        ys = [p[1] for p in poly]
         return (max(xs) - min(xs), max(ys) - min(ys))
 
 

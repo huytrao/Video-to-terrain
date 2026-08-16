@@ -63,17 +63,34 @@ def build_room(boxes: list[GTBox]) -> Room:
     up = _up_axis(boxes)
     horiz = [i for i in range(3) if i != up]
 
-    pts = np.vstack([_corners(b) for b in shell])
-    lo, hi = pts.min(axis=0), pts.max(axis=0)
-    polygon = [
-        [float(lo[horiz[0]]), float(lo[horiz[1]])],
-        [float(hi[horiz[0]]), float(lo[horiz[1]])],
-        [float(hi[horiz[0]]), float(hi[horiz[1]])],
-        [float(lo[horiz[0]]), float(hi[horiz[1]])],
-    ]
-
     floors = [b for b in boxes if b.label == "floor"]
     ceils = [b for b in boxes if b.label == "ceiling"]
+
+    # The footprint is the floor slab's own rectangle, kept rotated. Wrapping
+    # it to the world axes would inflate a rotated room — on the pilot scene a
+    # 6.42 x 6.22 m floor wraps to 11.49 x 11.44 m.
+    slab = max(floors, key=lambda b: b.size[0] * b.size[1]) if floors else None
+    if slab is None:
+        slab = max(ceils, key=lambda b: b.size[0] * b.size[1]) if ceils else None
+    if slab is not None:
+        half_a = slab.axes[0] * (slab.size[0] / 2.0)
+        half_b = slab.axes[1] * (slab.size[1] / 2.0)
+        corners = [
+            slab.center - half_a - half_b,
+            slab.center + half_a - half_b,
+            slab.center + half_a + half_b,
+            slab.center - half_a + half_b,
+        ]
+        polygon = [[float(c[horiz[0]]), float(c[horiz[1]])] for c in corners]
+    else:
+        pts = np.vstack([_corners(b) for b in shell])
+        lo, hi = pts.min(axis=0), pts.max(axis=0)
+        polygon = [
+            [float(lo[horiz[0]]), float(lo[horiz[1]])],
+            [float(hi[horiz[0]]), float(lo[horiz[1]])],
+            [float(hi[horiz[0]]), float(hi[horiz[1]])],
+            [float(lo[horiz[0]]), float(hi[horiz[1]])],
+        ]
     if floors and ceils:
         height = float(
             abs(

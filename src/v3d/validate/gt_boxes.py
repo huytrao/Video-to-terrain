@@ -92,36 +92,43 @@ def load_gt(path_or_bytes: str | Path | bytes) -> list[GTBox]:
     return out
 
 
-def room_dims_from_gt(boxes: list[GTBox]) -> dict[str, float]:
-    """Room length/width/height implied by the shell annotations.
+def room_dims_from_gt(boxes: list[GTBox]) -> dict[str, float | str | int]:
+    """Room footprint and height implied by the shell annotations.
 
-    Floor and wall boxes bound the footprint; the gap between floor and ceiling
-    gives the height. Returns only the keys it could actually derive.
+    The footprint comes from the floor box's *own* extents, not from an
+    axis-aligned wrap of its corners. None of the ScanNet++ shell boxes are
+    axis aligned, and wrapping a rotated box inflates it badly — on the pilot
+    scene a 6.42 x 6.22 m floor wraps to 11.49 x 11.44 m, which would fail a
+    correct reconstruction by three and a half metres.
+
+    Because ``GTBox.size`` is sorted descending along the box's own axes, the
+    two largest extents of a slab-shaped floor are its footprint regardless of
+    how the room is rotated in the world frame.
+
+    Height is the floor-to-ceiling centre separation along the up axis, which
+    is frame-independent and therefore directly comparable to a mesh.
     """
-    shell = [b for b in boxes if b.is_shell]
-    if not shell:
-        return {}
-
-    corners = []
-    for b in shell:
-        half = (b.axes.T * (b.size / 2.0)).T
-        for sx in (-1, 1):
-            for sy in (-1, 1):
-                for sz in (-1, 1):
-                    corners.append(b.center + sx * half[0] + sy * half[1] + sz * half[2])
-    pts = np.array(corners)
-    extent = pts.max(axis=0) - pts.min(axis=0)
-
-    dims = {
-        "footprint_a_m": float(max(extent[0], extent[1])),
-        "footprint_b_m": float(min(extent[0], extent[1])),
-    }
-
     floors = [b for b in boxes if b.label == "floor"]
     ceils = [b for b in boxes if b.label == "ceiling"]
+    dims: dict[str, float | str | int] = {}
+
+    if floors:
+        # widest floor annotation; fragments are common in these scenes
+        floor = max(floors, key=lambda b: b.size[0] * b.size[1])
+        dims["footprint_a_m"] = float(floor.size[0])
+        dims["footprint_b_m"] = float(floor.size[1])
+        dims["footprint_source"] = "floor_obb"
+    elif ceils:
+        ceiling = max(ceils, key=lambda b: b.size[0] * b.size[1])
+        dims["footprint_a_m"] = float(ceiling.size[0])
+        dims["footprint_b_m"] = float(ceiling.size[1])
+        dims["footprint_source"] = "ceiling_obb"
+
     if floors and ceils:
-        # Up axis is whichever direction separates floor from ceiling most.
-        sep = np.abs(np.mean([c.center for c in ceils], axis=0) - np.mean([f.center for f in floors], axis=0))
+        sep = np.abs(
+            np.mean([c.center for c in ceils], axis=0)
+            - np.mean([f.center for f in floors], axis=0)
+        )
         up = int(np.argmax(sep))
         dims["height_m"] = float(sep[up])
         dims["up_axis_index"] = up
