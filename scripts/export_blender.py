@@ -13,18 +13,33 @@ Produces, under outputs/run_mvp/blender/:
 """
 from __future__ import annotations
 import json
+import os
 import shutil
 from pathlib import Path
 
 import numpy as np
 import trimesh
 
-RUN = Path("/Users/traoanhuy/source_code/Full-pipeline-scan-terrain/Videos_to_terrain/outputs/run_mvp")
+RUN = Path(os.getenv(
+    "V2T_RUN_DIR",
+    "/Users/traoanhuy/source_code/Full-pipeline-scan-terrain/Videos_to_terrain/outputs/run_mvp",
+))
 OUT = RUN / "blender"
 
 
+def terrain_mesh_path() -> Path:
+    """Prefer the gravity-aligned mesh so terrain and collision boxes share a frame.
+
+    Stage F writes scene_mesh_aligned.ply after applying Stage E's gravity transform;
+    geometry/scene_mesh.ply is still in DA3's original tilted frame, and mixing the
+    two puts the terrain at an angle to the boxes.
+    """
+    aligned = RUN / "geometry" / "scene_mesh_aligned.ply"
+    return aligned if aligned.exists() else RUN / "geometry" / "scene_mesh.ply"
+
+
 def export_terrain_mesh() -> None:
-    src = RUN / "geometry" / "scene_mesh.ply"
+    src = terrain_mesh_path()
     mesh = trimesh.load(src)
     mesh.export(OUT / "terrain_mesh.glb")
     print(f"terrain_mesh.glb  <- {src}  ({len(mesh.vertices)} verts, {len(mesh.faces)} faces)")
@@ -37,7 +52,11 @@ def export_point_cloud() -> None:
 
 
 def _box_geom(size, rgba):
-    box = trimesh.creation.box(extents=[s * 2 for s in size])
+    # box.json "size" is the FULL extent per axis (Stage G passes D3's
+    # trimesh OBB `extents` through unchanged, and Stage I halves it for
+    # MuJoCo's half-extent geoms), so feed it to trimesh as-is - the old
+    # [s * 2 ...] drew every collision box at twice its real size.
+    box = trimesh.creation.box(extents=list(size))
     box.visual.vertex_colors = np.tile(
         (np.array(rgba) * 255).astype(np.uint8), (len(box.vertices), 1)
     )
@@ -54,7 +73,7 @@ def export_environment_scene() -> None:
         terrain = list(textured_scene.geometry.values())[0]
         print(f"environment_scene: using textured terrain from {textured_path.name}")
     else:
-        terrain = trimesh.load(RUN / "geometry" / "scene_mesh.ply")
+        terrain = trimesh.load(terrain_mesh_path())
         print("environment_scene: textured terrain not found, using vertex-colored mesh "
               "(run bake_texture.py first for a real UV texture)")
     scene.add_geometry(terrain, node_name="terrain_mesh")
@@ -73,11 +92,13 @@ def export_environment_scene() -> None:
                 continue
             size = data["size"]
             pos = data["position"]
-            rot = data.get("rotation", [0, 0, 0, 1])  # xyzw
+            # Stage G writes rotation as wxyz (both the matrix-derived and the
+            # pass-through-from-D3 paths), which is also what trimesh expects, so
+            # no reindexing - the old [rot[3], rot[0], rot[1], rot[2]] shuffle
+            # rotated every collision box onto the wrong axis.
+            rot = data.get("rotation", [1, 0, 0, 0])  # wxyz
             box = _box_geom(size, rgba)
-            transform = trimesh.transformations.quaternion_matrix(
-                [rot[3], rot[0], rot[1], rot[2]]  # trimesh wants wxyz
-            )
+            transform = trimesh.transformations.quaternion_matrix(rot)
             transform[:3, 3] = pos
             scene.add_geometry(box, node_name=f.stem, transform=transform)
 

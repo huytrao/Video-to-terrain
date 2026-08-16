@@ -24,6 +24,12 @@ DA3_MODEL = Path("/tmp/DA3NESTED-GIANT-LARGE")
 SAM3_CHECKPOINT = Path("/kaggle/working/sam3")
 WORK_ROOT = Path("/tmp/run")
 
+# The paper's scripts import depth_anything_3 and the PGSR packages, which are
+# unpacked rather than installed. A subprocess inherits none of the sys.path
+# edits made inside a notebook kernel, so they have to be handed over
+# explicitly — otherwise the stage dies on ModuleNotFoundError two seconds in.
+IMPORT_PATHS = (Path("/kaggle/working"), Path("/kaggle/working/depth_anything_3"))
+
 # The literal in inference_da3_scannetppv2.py that reaches for the network.
 DA3_REPO_ID = "depth-anything/DA3NESTED-GIANT-LARGE"
 
@@ -52,12 +58,25 @@ def apply_offline_patches(paper_root: Path = PAPER_ROOT, da3_model: Path = DA3_M
     return patches
 
 
+def stage_env(extra: dict[str, str] | None = None) -> dict[str, str]:
+    """Environment for a stage subprocess, with the unpacked packages on the path."""
+    import os
+
+    paths = [str(p) for p in IMPORT_PATHS if p.exists()]
+    existing = os.environ.get("PYTHONPATH", "")
+    if existing:
+        paths.append(existing)
+    return dict(os.environ, PYTHONPATH=os.pathsep.join(paths), **(extra or {}))
+
+
 def _run(cmd: list[str], cwd: Path, log: Path | None = None, env: dict | None = None) -> int:
     """Run a stage, streaming to a log so a long GPU job can be watched."""
     log = log or (WORK_ROOT / "logs" / (cmd[1].replace("/", "_") + ".log"))
     log.parent.mkdir(parents=True, exist_ok=True)
     with log.open("w") as fh:
-        proc = subprocess.run(cmd, cwd=str(cwd), stdout=fh, stderr=subprocess.STDOUT, env=env)
+        proc = subprocess.run(
+            cmd, cwd=str(cwd), stdout=fh, stderr=subprocess.STDOUT, env=env or stage_env()
+        )
     return proc.returncode
 
 

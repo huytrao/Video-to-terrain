@@ -236,9 +236,11 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--dest", required=True, help="absolute destination path on notebook B")
     p.add_argument("--extract-to", default="", help="if set, untar the file into this directory on B")
     p.add_argument("--workers", type=int, default=4)
-    p.add_argument("--subchunk", type=int, default=8,
-               help="MB per Contents-API PUT. Kaggle silently truncates PUTs around
-                    24 MB, and this reads exact-size blocks, so keep it well under.")
+    p.add_argument(
+        "--subchunk", type=int, default=8,
+        help="MB per Contents-API PUT. Kaggle silently truncates PUTs around 24 MB, "
+             "and this reads exact-size blocks, so keep it well under.",
+    )
     p.add_argument("--timeout", type=int, default=9000)
     args = p.parse_args(argv)
 
