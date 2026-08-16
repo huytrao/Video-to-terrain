@@ -86,8 +86,22 @@ def consolidate(label: str, vocabulary: Sequence[str]) -> str | None:
         return None
 
     words = label.split()
-    if len(words) > 1 and words[-1] in vocabulary:
+    if len(words) == 1:
+        return label
+
+    # The head noun wins whenever it is already a class: this is what keeps
+    # "green barrel" a barrel instead of a colour.
+    if words[-1] in vocabulary:
         return words[-1]
+
+    # Otherwise a known *leading* class means the label is an elaboration of it.
+    # "wood panel", "wood sawdust", "wood particleboard" have heads that are not
+    # classes in their own right, so without this the lumber pile fans out into
+    # twenty-nine variants. Applying it only in this order matters: reaching for
+    # the leading word first is what turned nine objects into "green".
+    if words[0] in vocabulary:
+        return words[0]
+
     return label
 
 
