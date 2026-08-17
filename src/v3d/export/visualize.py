@@ -273,6 +273,119 @@ def boxes_over_mesh(
     return written
 
 
+def encode_video(
+    frame_dir: str | Path,
+    out_path: str | Path,
+    pattern: str = "%04d.png",
+    fps: int = 30,
+    crf: int = 18,
+) -> Path:
+    """Encode a numbered frame sequence to H.264.
+
+    crf 18 is visually lossless for this material; the reconstruction's own
+    artefacts should be what a viewer sees, not the codec's.
+    """
+    import subprocess
+
+    out = Path(out_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    cmd = [
+        "ffmpeg", "-y", "-loglevel", "error",
+        "-framerate", str(fps),
+        "-i", str(Path(frame_dir) / pattern),
+        "-c:v", "libx264", "-preset", "slow", "-crf", str(crf),
+        "-pix_fmt", "yuv420p",
+        # H.264 needs even dimensions; renders are not guaranteed to have them
+        "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+        str(out),
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise RuntimeError(f"ffmpeg failed: {result.stderr[-800:]}")
+    return out
+
+
+def turntable_video(
+    mesh_path: str | Path,
+    out_path: str | Path,
+    n_frames: int = 180,
+    size: tuple[int, int] = (1280, 900),
+    elevation_deg: float = 25.0,
+    fps: int = 30,
+    boxes=None,
+    min_size_m: float = 0.0,
+) -> Path:
+    """One full orbit of the reconstruction, optionally with object boxes.
+
+    A still frame cannot show whether a surface is flat or whether a box sits
+    where the object is; a rotation can. This is the artefact worth showing
+    someone first.
+    """
+    import tempfile
+
+    import open3d as o3d
+
+    mesh = o3d.io.read_triangle_mesh(str(mesh_path))
+    mesh.compute_vertex_normals()
+    verts = np.asarray(mesh.vertices)
+    centre = verts.mean(axis=0)
+
+    r = _renderer(*size)
+    r.scene.add_geometry("mesh", mesh, _lit_material())
+
+    extremes = [verts]
+    if boxes:
+        line_mat = _line_material(2.5)
+        for i, b in enumerate(boxes):
+            if float(np.max(b.size)) < min_size_m:
+                continue
+            colour = SHELL_COLOR if getattr(b, "is_shell", False) else BOX_COLOR
+            r.scene.add_geometry(f"box_{i}", _box_lineset(b.center, b.size, b.axes, colour), line_mat)
+            extremes.append(np.array([b.center - b.size / 2, b.center + b.size / 2]))
+
+    radius = float(np.linalg.norm(np.vstack(extremes) - centre, axis=1).max()) * (1.6 if boxes else 1.35)
+    el = np.radians(elevation_deg)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        for i in range(n_frames):
+            az = 2 * np.pi * i / n_frames
+            eye = centre + radius * np.array(
+                [np.cos(az) * np.cos(el), np.sin(az) * np.cos(el), np.sin(el)]
+            )
+            r.scene.camera.look_at(centre.tolist(), eye.tolist(), [0, 0, 1])
+            o3d.io.write_image(f"{tmp}/{i:04d}.png", r.render_to_image())
+        return encode_video(tmp, out_path, fps=fps)
+
+
+def frames_to_video(
+    frame_dir: str | Path,
+    out_path: str | Path,
+    fps: int = 12,
+    limit: int | None = None,
+) -> Path:
+    """Turn an arbitrarily-named image directory into a video, in sorted order.
+
+    Used for the trained 3DGS renders, whose filenames follow the capture
+    (DSC00850.jpg …) rather than a frame index.
+    """
+    import shutil
+    import tempfile
+
+    files = sorted(
+        p for p in Path(frame_dir).iterdir()
+        if p.suffix.lower() in {".jpg", ".jpeg", ".png"}
+    )
+    if not files:
+        raise FileNotFoundError(f"no images in {frame_dir}")
+    if limit:
+        files = files[:limit]
+
+    with tempfile.TemporaryDirectory() as tmp:
+        for i, f in enumerate(files):
+            shutil.copy(f, f"{tmp}/{i:04d}{f.suffix.lower()}")
+        return encode_video(tmp, out_path, pattern=f"%04d{files[0].suffix.lower()}", fps=fps)
+
+
 def depth_sheet(
     depth_dir: str | Path,
     out_path: str | Path,
