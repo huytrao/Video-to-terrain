@@ -38,6 +38,45 @@ DERIVED_PLY_FALLBACK = (
     "  # v3d: was an absolute path from the authors' machine"
 )
 
+# SAM3 ships float32 weights — all 1102 parameters, and its config says
+# dtype: float32 — but is meant to run under bf16 autocast: Meta's own
+# measure_speed.py, qualitative_test.py and bench_compile.py all open
+# `torch.autocast(device_type="cuda", dtype=torch.bfloat16).__enter__()` before
+# touching the model. Holi-Spatial's sam3.py does not, and something inside the
+# vision backbone casts to bf16 regardless, so inference dies on
+# "mat1 and mat2 must have the same dtype, but got BFloat16 and Float".
+# Entering the same context Meta uses is the fix, and it belongs at import time
+# because the script builds and runs the model inside main().
+SAM3_IMPORT_ANCHOR = "from sam3.model.sam3_image_processor import Sam3Processor"
+SAM3_AUTOCAST = (
+    "from sam3.model.sam3_image_processor import Sam3Processor\n"
+    "import torch as _torch  # v3d: SAM3 expects a bf16 autocast context, as\n"
+    "_torch.autocast(device_type='cuda', dtype=_torch.bfloat16).__enter__()  # Meta's own scripts do"
+)
+
+# Enabling that autocast makes the model's outputs bf16, and numpy has no bf16
+# dtype, so sam3.py then dies on "Got unsupported ScalarType BFloat16" the
+# moment it converts scores. All three conversions in normalize_masks_boxes
+# need the same guard. Masks may legitimately be bool, so the cast is applied
+# only to floating-point tensors rather than blanket .float().
+SAM3_NUMPY_BEFORE = """    if isinstance(masks, torch.Tensor):
+        masks = masks.detach().cpu().numpy()
+    if boxes is not None and isinstance(boxes, torch.Tensor):
+        boxes = boxes.detach().cpu().numpy()
+    if scores is not None and isinstance(scores, torch.Tensor):
+        scores = scores.detach().cpu().numpy()"""
+
+SAM3_NUMPY_AFTER = """    def _np(t):  # v3d: bf16 from autocast has no numpy equivalent
+        t = t.detach()
+        return (t.float() if t.is_floating_point() else t).cpu().numpy()
+
+    if isinstance(masks, torch.Tensor):
+        masks = _np(masks)
+    if boxes is not None and isinstance(boxes, torch.Tensor):
+        boxes = _np(boxes)
+    if scores is not None and isinstance(scores, torch.Tensor):
+        scores = _np(scores)"""
+
 # mesh.sh defaults, kept identical so the surface matches the paper's.
 RENDER_MAX_DEPTH = "4.0"
 MASK_MAX_DEPTH = "6.0"
@@ -70,6 +109,8 @@ def apply_offline_patches(cfg: PipelineConfig | None = None) -> list[Patch]:
 
     swap("inference_da3_scannetppv2.py", f'"{DA3_REPO_ID}"', f'"{cfg.da3_model}"')
     swap("PGSR/scene/dataset_readers.py", STALE_PLY_FALLBACK, DERIVED_PLY_FALLBACK)
+    swap("sam3.py", SAM3_IMPORT_ANCHOR, SAM3_AUTOCAST)
+    swap("sam3.py", SAM3_NUMPY_BEFORE, SAM3_NUMPY_AFTER)
     return patches
 
 
