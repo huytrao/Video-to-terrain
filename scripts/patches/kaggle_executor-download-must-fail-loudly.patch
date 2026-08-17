@@ -1,0 +1,31 @@
+diff --git a/kaggle_executor.py b/kaggle_executor.py
+index 5b98e50..6f90b94 100644
+--- a/kaggle_executor.py
++++ b/kaggle_executor.py
+@@ -400,12 +400,25 @@ def main(argv: list[str] | None = None) -> None:
+             ex.upload_file(args.local, args.remote)
+ 
+         case "download":
+-            ex.download_file(args.remote, args.local)
++            # download_file returns False on HTTP 4xx/5xx and on a non-file
++            # model. Discarding that made a 404 exit 0: two videos "downloaded"
++            # and the retry wrapper reported success on a transfer that moved no
++            # bytes. The Contents API is rooted at the notebook directory, so an
++            # absolute /kaggle/working/... path 404s where the relative one works
++            # -- a mistake that has to be loud or it is invisible.
++            if not ex.download_file(args.remote, args.local):
++                sys.exit(
++                    f"ERROR: download failed: {args.remote}\n"
++                    f"       paths are relative to the notebook dir "
++                    f"(/kaggle/working), so drop any leading /kaggle/working/"
++                )
+ 
+         case "download-dir":
+             ext = tuple(args.ext) if args.ext else ()
+             n = ex.download_dir(args.remote_dir, args.local_dir, ext)
+             print(f"\n✓ Downloaded {n} file(s) → {args.local_dir}")
++            if n == 0:
++                sys.exit(f"ERROR: no files downloaded from {args.remote_dir}")
+ 
+         case "ls":
+             ex.list_path(args.remote)

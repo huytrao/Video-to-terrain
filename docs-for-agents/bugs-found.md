@@ -695,6 +695,63 @@ written to enforce it. `kx.sh` now redirects to a file and tests the executor's
 own status. (Also: macOS has no `timeout`, and zsh has no `${!var}` indirect
 expansion — both bit this script.)
 
+**And a second trap in the wrapper.** The transport pattern above contains
+`Cannot reach Jupyter API`, but the executor reports an expired token as
+`Cannot reach Jupyter API: HTTP 404` — so the *terminal* failure matched the
+*transient* pattern and every dead URL cost six attempts and 126 s of backoff
+before admitting it. The 404 case is now tested **before** the transport pattern
+and exits immediately, naming the two `.env` keys to update. When a classifier
+has a catch-all arm, check that the specific case is tested first.
+
+### C7 — `. ./.env` executes the file, and printed a live key into a terminal log
+
+Loading the environment with `set -a && . ./.env` runs every line as a shell
+command. `.env` contained `CLAUDEFARE-API-KEY=cfut_…`; a dash is not legal in a
+shell identifier, so zsh could not parse it as an assignment, tried to run it as
+a **command**, and put the whole line — key value included — into the
+`command not found` error. The credential was then in a terminal log and a
+session transcript, which is the one place a credential must never be.
+
+The blast radius is not limited to malformed lines: any `.env` line beginning
+with a backtick or `$(` would be *executed* by the same mechanism.
+
+**Fix.** `scripts/kenv.sh` greps out only the keys the caller needs
+(`KAGGLE_WITHOUT_INTERNET`, `KAGGLE_HAS_INTERNET`, `HF_TOKEN`) and prints them as
+`export` lines for `eval`. It cannot execute anything else in the file no matter
+what the file contains. Never `source` a `.env` that a human edits by hand.
+The exposed key must be **rotated** — redacting the file afterwards does not
+un-log it. (See also B16: this is the second credential incident from treating
+dotenv files as ordinary config.)
+
+### C8 — two probe results that read as failure and were not
+
+Both cost real time by sending a session looking for a problem that did not exist.
+
+- **Attached datasets are at `/kaggle/input/datasets/<owner>/<name>`**, not
+  `/kaggle/input/<name>`. Probing the short path reported all three model
+  datasets ABSENT while every one was attached and readable, and produced a
+  written conclusion that a 6.76 GB dataset push had "silently failed". It had
+  not. `scripts/kernel_probe.py` now uses the long form.
+- **`huggingface.co/api/whoami-v2` answers HTTP 401 without a token**, and
+  `urllib` raises `HTTPError` for that. A bare `except` around it reported
+  "NO internet" on a kernel whose network was fine. Any HTTP status proves the
+  host answered; only `URLError`/socket errors mean unreachable. Both the probe
+  and any future reachability check must distinguish the two.
+
+### C9 — `kx.sh` shows nothing until the job ends, so long stages look hung
+
+The retry wrapper redirects the executor's output to a temp file and `cat`s it on
+success — necessary to test the executor's own exit status (see C6), but it means
+a stage that runs for 54 minutes prints **nothing** for 54 minutes, which is
+indistinguishable from a hang. It also cannot retry a job that already burned an
+hour of GPU.
+
+**Use `kx.sh` for short, retryable calls** (uploads, probes, installs) and
+`kaggle_executor.py run` **directly** for the long GPU stages, where the
+websocket streams stdout live and a dropped connection does not kill the remote
+job (C5). Log to a file on the kernel as well, so a dropped websocket can be
+recovered from by tailing rather than re-running.
+
 ---
 
 ## D. Standing rules these bugs produced
@@ -741,3 +798,15 @@ expansion — both bit this script.)
     were unreachable from the CLI; wiring them up surfaced a reference to a
     non-existent attribute and an unconditional patch step in the first minute.
     If there is no command that runs it, assume it is broken.
+12. **Never `source` a file containing secrets.** `. ./.env` executes it; one
+    key whose *name* contained a dash was therefore run as a command and its
+    value printed into a terminal log (C7). Parse out the keys you need with
+    `grep` — `scripts/kenv.sh` — so the file's contents can never be executed.
+    Secrets have now leaked twice in this project from treating dotenv files as
+    ordinary config (B16, C7).
+13. **A probe that reports absence must be tested against known-present data.**
+    Two probes in one session cried failure at healthy systems: a dataset path
+    missing its `/datasets/<owner>/` segment declared three attached datasets
+    ABSENT, and an HTTP 401 was read as "no internet" (C8). This is rule 6
+    pointed at diagnostics: a check that cannot pass on a working system tells
+    you about itself, not the system.

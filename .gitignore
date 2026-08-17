@@ -52,3 +52,14 @@ depth-anything-3/__pycache__/
 
 # Kaggle proxy URL cache (short-lived, machine-specific)
 .kaggle_proxy_url_cache
+
+# The Kaggle transfer toolkit is a separate git checkout of
+# github.com/huytrao/kaggle-runtime-toolkit-agent-skills. Committing the directory
+# here would store a *gitlink*, so a fresh clone would get an empty folder and the
+# local fix to kaggle_executor.py would silently vanish -- which is the class of
+# invisible failure that fix exists to prevent. It is ignored here instead, and the
+# local modification is kept as scripts/patches/*.patch until it lands upstream.
+kaggle-runtime-toolkit-agent-skills/
+# source-reference/ holds the paper checkouts (holi-spatial, Depth-Anything-3) and
+# the 15 MB PDF: ~116 MB of upstream code that is fetched, not authored here.
+source-reference/

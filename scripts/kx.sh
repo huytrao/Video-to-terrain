@@ -44,6 +44,17 @@ for try in $(seq 1 "$TRIES"); do
     cat "$log"
     exit 0
   fi
+  # A 404 on the handshake means the JWT in the URL has expired -- no number of
+  # retries revives it, and waiting 126 s to be told so wastes the operator's
+  # time. It has to be tested *before* the transport pattern below, because the
+  # executor reports it as "Cannot reach Jupyter API: HTTP 404" and would
+  # otherwise match as transient.
+  if grep -q 'Cannot reach Jupyter API: HTTP 404' "$log"; then
+    echo "kx: proxy URL is expired (HTTP 404 on /api) -- not a transient failure." >&2
+    echo "    Reopen the notebook's 'Kaggle Jupyter Server' panel and update the URL" >&2
+    echo "    in .env (KAGGLE_WITHOUT_INTERNET / KAGGLE_HAS_INTERNET)." >&2
+    exit 3
+  fi
   # A real error from the remote code is not worth retrying; a transport failure
   # is. Distinguish them, so a failing script does not take six attempts to say so.
   if grep -qE 'ReadTimeout|ConnectionError|HTTP 5[0-9][0-9]|Cannot reach Jupyter API|RemoteDisconnected|Connection aborted' "$log"; then
