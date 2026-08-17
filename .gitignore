@@ -5,6 +5,10 @@
 # holds a plaintext Kaggle API key
 kaggle_upload_example.py
 **/kaggle.json
+# the Kaggle Jupyter proxy URL's path *is* a ~400-char JWT, so this file is a
+# credential with an expiry, not configuration. Live URLs belong in .env
+# (KAGGLE_WITHOUT_INTERNET / KAGGLE_HAS_INTERNET); this is the local fallback.
+server-connect.txt
 
 # Python
 __pycache__/

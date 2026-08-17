@@ -344,6 +344,96 @@ def boxes_output(scene_id: str, cfg: PipelineConfig) -> Path:
     return cfg.work_root / "boxes" / scene_id
 
 
+def scene_output(scene_id: str, cfg: PipelineConfig) -> Path:
+    return cfg.work_root / "scene" / scene_id / "scene.json"
+
+
+def gate_output(scene_id: str, cfg: PipelineConfig) -> Path:
+    return cfg.work_root / "scene" / scene_id / "stage_j.json"
+
+
+def _sole_json(directory: Path, what: str) -> Path:
+    """The one instance-annotation json in `directory`, or a refusal to guess.
+
+    postprocess_3d_bbox_aabb.py writes to a directory, while build_scene reads a
+    file. Picking the newest or the alphabetically-first would silently grade a
+    stale run, and grading the wrong file is indistinguishable from a good
+    result, so an ambiguous directory is an error.
+    """
+    found = sorted(p for p in directory.glob("*.json") if not p.name.startswith("."))
+    if not found:
+        raise FileNotFoundError(f"no {what} json in {directory}")
+    if len(found) > 1:
+        raise ValueError(
+            f"{directory} holds {len(found)} json files "
+            f"({', '.join(p.name for p in found)}); pass one explicitly rather "
+            f"than letting the gate pick, since grading the wrong file looks "
+            f"exactly like grading the right one"
+        )
+    return found[0]
+
+
+def stage_scene(
+    scene: str | SceneLayout,
+    cfg: PipelineConfig | None = None,
+    instances: Path | None = None,
+) -> int:
+    """Turn the floor-aligned boxes into the `scene.json` the gate reads.
+
+    The simulator-facing document, and the last stage that is pure geometry
+    bookkeeping — everything above it needed a GPU.
+    """
+    from v3d.scene.from_holi import build_scene
+
+    cfg = cfg or PipelineConfig()
+    layout = _layout(scene, cfg)
+
+    src = instances or _sole_json(boxes_output(layout.scene_id, cfg), "floor-aligned box")
+    doc = build_scene(layout.scene_id, src)
+    out = doc.write(scene_output(layout.scene_id, cfg))
+
+    length, width = doc.room.footprint_extent_m()
+    print(f"  {len(doc.objects)} objects, room {length:.2f} x {width:.2f} x "
+          f"{doc.room.height_m():.2f} m -> {out}")
+    return 0
+
+
+def stage_gate(
+    scene: str | SceneLayout,
+    cfg: PipelineConfig | None = None,
+    gt: Path | None = None,
+    tol_m: float | None = None,
+) -> int:
+    """Stage J — grade `scene.json` against the released annotation.
+
+    Returns 0 only when the gate passes, so `--stage all` fails loudly on a
+    scene that reconstructed but did not reconstruct *accurately*. Without a
+    ground truth it runs the structural half and says so, which is the only
+    thing available for a scene that came from a phone video.
+    """
+    import json
+
+    from v3d.validate import stage_j
+
+    cfg = cfg or PipelineConfig()
+    layout = _layout(scene, cfg)
+    scene_path = scene_output(layout.scene_id, cfg)
+    if not scene_path.exists():
+        raise FileNotFoundError(f"run stage_scene first: {scene_path} is missing")
+
+    report = stage_j.run(scene_path, gt, tol_m if tol_m is not None else stage_j.DEFAULT_TOL_M)
+    out = gate_output(layout.scene_id, cfg)
+    out.write_text(json.dumps(report.to_dict(), indent=2))
+
+    for c in report.checks:
+        print(f"  [{c.status}] {c.id}  {c.detail}")
+    if report.recall is not None:
+        print(f"  recall {report.recall * 100:.1f}%  "
+              f"structural {report.structural_verdict}  metric {report.metric_verdict}")
+    print(f"  OVERALL {report.overall} -> {out}")
+    return 0 if report.overall == "PASS" else 1
+
+
 def stage_report(scene: str | SceneLayout, cfg: PipelineConfig | None = None) -> dict[str, object]:
     """What exists so far, so a stage can be resumed rather than repeated."""
     cfg = cfg or PipelineConfig()
@@ -353,6 +443,8 @@ def stage_report(scene: str | SceneLayout, cfg: PipelineConfig | None = None) ->
     def mb(p: Path) -> float | None:
         return round(p.stat().st_size / 1e6, 1) if p.exists() else None
 
+    raw_boxes = cfg.work_root / "boxes_raw" / layout.scene_id
+    boxes = boxes_output(layout.scene_id, cfg)
     return {
         "scene": layout.scene_id,
         "layout": str(layout.source_dir),
@@ -362,11 +454,30 @@ def stage_report(scene: str | SceneLayout, cfg: PipelineConfig | None = None) ->
         "mesh_mb": mb(mesh),
         "masks": len(list(layout.mask_dir.glob("*"))) if layout.mask_dir.is_dir() else 0,
         "vlm_labels": vlm_output(layout.scene_id, cfg).exists(),
+        "boxes_raw": len(list(raw_boxes.glob("*.json"))) if raw_boxes.is_dir() else 0,
+        "boxes_aligned": len(list(boxes.glob("*.json"))) if boxes.is_dir() else 0,
+        "scene_json_mb": mb(scene_output(layout.scene_id, cfg)),
+        "gate": mb(gate_output(layout.scene_id, cfg)),
     }
 
 
+# Every stage the CLI can dispatch, in the order they depend on each other.
+# lift3d and postprocess existed as functions but were absent from this table,
+# from the --stage choices, and from the "all" ordering, so the boxes the whole
+# benchmark is measured on could not be produced from the command line at all;
+# scene and gate had no stage wrapper. The tail is what produces the number.
 STAGES = {"da3": stage_da3, "pgsr": stage_pgsr, "mesh": stage_mesh,
-          "vlm": stage_vlm, "sam3": stage_sam3}
+          "vlm": stage_vlm, "sam3": stage_sam3, "lift3d": stage_lift3d,
+          "postprocess": stage_postprocess, "scene": stage_scene, "gate": stage_gate}
+
+ALL_ORDER = ["da3", "pgsr", "mesh", "vlm", "sam3", "lift3d", "postprocess", "scene", "gate"]
+
+# The stages that shell into the paper's checkout, and so need its two
+# machine-specific paths rewritten first. The rest run in this process: vlm
+# calls v3d.semantic.vlm, and scene/gate/report are geometry bookkeeping over
+# json. Patching unconditionally made `--stage scene` fail for want of a paper
+# repo it never reads, on a laptop that will never have one.
+PAPER_STAGES = frozenset({"da3", "pgsr", "mesh", "sam3", "lift3d", "postprocess"})
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -375,10 +486,13 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("scene")
     ap.add_argument("--stage", default="report",
-                    choices=["patch", "da3", "pgsr", "mesh", "vlm", "sam3", "all", "report"])
+                    choices=["patch", *ALL_ORDER, "all", "tail", "report"],
+                    help="'tail' is lift3d..gate: everything after the GPU stages")
     ap.add_argument("--paper-root", type=Path)
     ap.add_argument("--data-root", type=Path)
     ap.add_argument("--work-root", type=Path)
+    ap.add_argument("--gt", type=Path, help="ground-truth boxes, for --stage gate")
+    ap.add_argument("--tol", type=float, help="gate tolerance in metres")
     args = ap.parse_args(argv)
 
     cfg = PipelineConfig()
@@ -386,15 +500,25 @@ def main(argv: list[str] | None = None) -> int:
         if getattr(args, name) is not None:
             setattr(cfg, name, getattr(args, name))
 
-    if args.stage != "report":
+    if args.stage == "all":
+        order = ALL_ORDER
+    elif args.stage == "tail":
+        order = ALL_ORDER[ALL_ORDER.index("lift3d"):]
+    else:
+        order = [args.stage]
+
+    if args.stage == "patch" or PAPER_STAGES.intersection(order):
         for p in apply_offline_patches(cfg):
             print(f"  {p.path.name}: {'patched' if p.applied else 'already local'}")
 
-    order = ["da3", "pgsr", "mesh", "vlm", "sam3"] if args.stage == "all" else [args.stage]
     for name in order:
         if name not in STAGES:
             continue
-        rc = STAGES[name](args.scene, cfg)
+        print(f"--- {name} ---")
+        if name == "gate":
+            rc = stage_gate(args.scene, cfg, gt=args.gt, tol_m=args.tol)
+        else:
+            rc = STAGES[name](args.scene, cfg)
         print(f"  {name} exit code {rc}")
         if rc != 0:
             return rc
