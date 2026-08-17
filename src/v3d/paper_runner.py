@@ -283,6 +283,67 @@ def stage_sam3(scene: str | SceneLayout, cfg: PipelineConfig | None = None) -> i
     )
 
 
+def stage_lift3d(
+    scene: str | SceneLayout,
+    cfg: PipelineConfig | None = None,
+    min_points: int = 30,
+    erode_pixels: int = 15,
+) -> int:
+    """Lift the 2D masks into 3D boxes using the trained gaussians.
+
+    ``--mask-root`` is the *parent*: the script reads
+    ``mask_root / scene / "mask_index.json"``, and sam3.py nests the scene name
+    once already, so the masks sit two levels deep.
+    """
+    cfg = cfg or PipelineConfig()
+    layout = _layout(scene, cfg)
+
+    mask_root = cfg.work_root / "sam_masks" / layout.scene_id
+    index = mask_root / layout.scene_id / "mask_index.json"
+    if not index.exists():
+        raise FileNotFoundError(f"run stage_sam3 first: {index} is missing")
+
+    model_dir = cfg.gs_root / layout.scene_id
+    if not (model_dir / "cfg_args").exists():
+        raise FileNotFoundError(f"no trained gaussians at {model_dir}")
+
+    return _run(
+        [sys.executable, "3d_bounding_instance_gs_rerun_da3.py",
+         "--scene", layout.scene_id,
+         "--data-root", str(cfg.data_root),
+         "--mask-root", str(mask_root),
+         "--model-path", str(model_dir),
+         "--output-dir", str(cfg.work_root / "boxes_raw" / layout.scene_id),
+         "--iteration", "-1",
+         "--min-points", str(min_points),
+         "--erode-pixels", str(erode_pixels)],
+        cfg,
+        f"{layout.scene_id}_lift3d.log",
+    )
+
+
+def stage_postprocess(scene: str | SceneLayout, cfg: PipelineConfig | None = None) -> int:
+    """Floor-align the boxes, which is what the released annotations are."""
+    cfg = cfg or PipelineConfig()
+    layout = _layout(scene, cfg)
+
+    raw = cfg.work_root / "boxes_raw" / layout.scene_id
+    if not raw.is_dir() or not any(raw.glob("*.json")):
+        raise FileNotFoundError(f"run stage_lift3d first: nothing in {raw}")
+
+    return _run(
+        [sys.executable, "postprocess_3d_bbox_aabb.py",
+         "--input_dir", str(raw),
+         "--output_dir", str(cfg.work_root / "boxes" / layout.scene_id)],
+        cfg,
+        f"{layout.scene_id}_postprocess.log",
+    )
+
+
+def boxes_output(scene_id: str, cfg: PipelineConfig) -> Path:
+    return cfg.work_root / "boxes" / scene_id
+
+
 def stage_report(scene: str | SceneLayout, cfg: PipelineConfig | None = None) -> dict[str, object]:
     """What exists so far, so a stage can be resumed rather than repeated."""
     cfg = cfg or PipelineConfig()
