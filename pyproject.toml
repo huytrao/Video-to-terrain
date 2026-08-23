@@ -1,0 +1,82 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "v3d"
+version = "0.1.0"
+description = "Video to metric 3D environments: RGB scan -> physics-ready MuJoCo scene"
+readme = "README.md"
+requires-python = ">=3.10,<3.14"
+license = { text = "Proprietary" }
+
+# Upper bound on Python is not ours: depth-anything-3 declares
+# requires-python ">=3.9, <=3.13", and the DA3 stages import it in-process.
+# The working local environment is .venv at 3.11.15.
+#
+# Versions below are floors taken from that working .venv, not guesses. Raising a
+# floor is safe; the one hard ceiling is documented at its entry.
+dependencies = [
+    "numpy>=2.4",
+    "scipy>=1.17",
+    "opencv-python>=4.10",
+    "open3d>=0.19",
+    "trimesh>=4.5",
+    "onnxruntime>=1.20",
+    "torch>=2.5",
+    "torchvision>=0.20",
+    "matplotlib>=3.10",
+    "imageio>=2.37",
+    "imageio-ffmpeg>=0.6",
+    "pillow>=11.0",
+    "mujoco>=3.11",
+    "transformers>=4.45",
+    "pycocotools>=2.0.8",
+    "requests>=2.32",
+    "websocket-client>=1.8",
+]
+
+[project.optional-dependencies]
+# Texture baking and UV work. Kept out of the core set because pymeshlab and
+# rembg are not installed in the working .venv -- only scripts/tools/ needs them.
+texture = [
+    "pymeshlab>=2023.12",
+    "rembg>=2.0.60",
+    "xatlas>=0.0.9",
+]
+# VLM / semantic labelling helpers under skills/.
+llm = [
+    "groq>=1.6",
+    # Distribution is named `tavily` in the working .venv, not `tavily-python`.
+    "tavily>=1.1",
+]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[project.scripts]
+v3d = "v3d.paper_runner:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["v3d*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+# Vendored upstream checkouts are fetched, not authored here.
+extend-exclude = [
+    "depth-anything-3",
+    "Hunyuan3D-2",
+    "source-reference",
+    "kaggle-runtime-toolkit-agent-skills",
+    ".venv",
+]

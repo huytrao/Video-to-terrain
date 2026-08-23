@@ -1,0 +1,236 @@
+{
+  "pipeline": {
+    "run_name": "run_mvp",
+    "stage": "H",
+    "description": "Robot policy configuration for MJLab scene",
+    "policy_type": "tracking",
+    "terrain_type": "plane"
+  },
+  "robot": {
+    "config_import": "vinrobotics_mjlab.assets.robots.vr_m3_1.vr_m3_1_constants:get_vr_m3_1_implicit_actuator_robot_cfg",
+    "spawn": {
+      "robot_name": "pelvis",
+      "spawn_height": 1.0,
+      "spawn_position": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "spawn_orientation": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  "actuators": {
+    "action_scales": {
+      "hip_pitch": 0.6,
+      "hip_roll": 0.6,
+      "hip_yaw": 0.2708333333333333,
+      "knee_pitch": 0.45,
+      "ankle_pitch": 0.15,
+      "ankle_roll": 0.15,
+      "waist_yaw": 0.06948228882833787,
+      "shoulder_pitch": 0.11785714285714285,
+      "shoulder_roll": 0.11785714285714285,
+      "shoulder_yaw": 0.2125,
+      "elbow_pitch": 0.2125,
+      "wrist_yaw": 0.09166666666666666,
+      "wrist_roll": 0.09166666666666666,
+      "wrist_pitch": 0.09166666666666666
+    },
+    "joint_patterns": {
+      "left_hip_pitch_joint": "hip_pitch",
+      "right_hip_pitch_joint": "hip_pitch",
+      "left_hip_roll_joint": "hip_roll",
+      "right_hip_roll_joint": "hip_roll",
+      "left_hip_yaw_joint": "hip_yaw",
+      "right_hip_yaw_joint": "hip_yaw",
+      "left_knee_pitch_joint": "knee_pitch",
+      "right_knee_pitch_joint": "knee_pitch",
+      "left_ankle_pitch_joint": "ankle_pitch",
+      "right_ankle_pitch_joint": "ankle_pitch",
+      "left_ankle_roll_joint": "ankle_roll",
+      "right_ankle_roll_joint": "ankle_roll",
+      "waist_yaw_joint": "waist_yaw",
+      "left_shoulder_pitch_joint": "shoulder_pitch",
+      "right_shoulder_pitch_joint": "shoulder_pitch",
+      "left_shoulder_roll_joint": "shoulder_roll",
+      "right_shoulder_roll_joint": "shoulder_roll",
+      "left_shoulder_yaw_joint": "shoulder_yaw",
+      "right_shoulder_yaw_joint": "shoulder_yaw",
+      "left_elbow_pitch_joint": "elbow_pitch",
+      "right_elbow_pitch_joint": "elbow_pitch",
+      "left_wrist_yaw_joint": "wrist_yaw",
+      "right_wrist_yaw_joint": "wrist_yaw",
+      "left_wrist_roll_joint": "wrist_roll",
+      "right_wrist_roll_joint": "wrist_roll",
+      "left_wrist_pitch_joint": "wrist_pitch",
+      "right_wrist_pitch_joint": "wrist_pitch"
+    },
+    "control_type": "position",
+    "decimation": 4
+  },
+  "simulation": {
+    "dt": 0.005,
+    "decimation": 4,
+    "control_freq_hz": 50
+  },
+  "terrain": {
+    "type": "plane",
+    "friction": 0.8
+  },
+  "production": {
+    "checkpoint_dir": null,
+    "checkpoint_available": false
+  },
+  "policy": {
+    "policy_type": "tracking",
+    "task_config": "vinrobotics_mjlab.tasks.tracking.config.vr_m3_1.env_cfgs:vr_m3_1_flat_tracking_env_cfg",
+    "root_body": "pelvis",
+    "torso_body": "waist_yaw_link",
+    "tracked_bodies": [
+      "pelvis",
+      "left_hip_roll_link",
+      "left_knee_pitch_link",
+      "left_ankle_roll_link",
+      "right_hip_roll_link",
+      "right_knee_pitch_link",
+      "right_ankle_roll_link",
+      "waist_yaw_link",
+      "left_shoulder_roll_link",
+      "left_elbow_pitch_link",
+      "left_wrist_yaw_link",
+      "right_shoulder_roll_link",
+      "right_elbow_pitch_link",
+      "right_wrist_yaw_link"
+    ],
+    "end_effector_bodies": [
+      "left_ankle_roll_link",
+      "right_ankle_roll_link",
+      "left_wrist_yaw_link",
+      "right_wrist_yaw_link"
+    ],
+    "foot_geoms_pattern": "^(left|right)_ankle_roll_link_collision_\\d+$",
+    "motion_command": {
+      "anchor_body_name": "waist_yaw_link",
+      "body_names": [
+        "pelvis",
+        "left_hip_roll_link",
+        "left_knee_pitch_link",
+        "left_ankle_roll_link",
+        "right_hip_roll_link",
+        "right_knee_pitch_link",
+        "right_ankle_roll_link",
+        "waist_yaw_link",
+        "left_shoulder_roll_link",
+        "left_elbow_pitch_link",
+        "left_wrist_yaw_link",
+        "right_shoulder_roll_link",
+        "right_elbow_pitch_link",
+        "right_wrist_yaw_link"
+      ],
+      "sampling_mode": "start",
+      "pose_range": {},
+      "velocity_range": {}
+    },
+    "rewards": {
+      "body_pos_tracking": {
+        "weight": 1.0
+      },
+      "body_vel_tracking": {
+        "weight": 0.1
+      },
+      "body_orientation_tracking": {
+        "weight": 0.5
+      },
+      "joint_pos_regularization": {
+        "weight": 0.01
+      },
+      "action_rate": {
+        "weight": 0.005
+      },
+      "foot_clearance": {
+        "weight": 0.05
+      },
+      "feet_air_time": {
+        "weight": 0.0
+      }
+    },
+    "terminations": {
+      "ee_body_pos": {
+        "body_names": [
+          "left_ankle_roll_link",
+          "right_ankle_roll_link",
+          "left_wrist_yaw_link",
+          "right_wrist_yaw_link"
+        ]
+      },
+      "bad_orientation": {
+        "limit_angle": 0.785
+      },
+      "height": {
+        "min_height": 0.3,
+        "max_height": 2.0
+      }
+    }
+  },
+  "environment": {
+    "room_dims": [
+      10,
+      10,
+      3
+    ],
+    "floor_height": 0.0,
+    "has_stairs": false,
+    "objects": [
+      {
+        "name": "chair_0",
+        "category": "chair",
+        "position": [
+          0.018889179503346364,
+          -0.4095088587846324,
+          2.347901237391062
+        ]
+      },
+      {
+        "name": "floor_1",
+        "category": "floor",
+        "position": [
+          0.02763590776167279,
+          -0.39342793631414485,
+          2.319188490576639
+        ]
+      },
+      {
+        "name": "wall_2",
+        "category": "wall",
+        "position": [
+          0.04265483949152746,
+          -0.3470705486313407,
+          2.382479153632165
+        ]
+      },
+      {
+        "name": "table_3",
+        "category": "table",
+        "position": [
+          0.01806872380597245,
+          -0.40621646800562156,
+          2.3466417107147195
+        ]
+      },
+      {
+        "name": "ceiling_4",
+        "category": "ceiling",
+        "position": [
+          0.035577262348197046,
+          -0.35684502294205706,
+          2.3904652953227004
+        ]
+      }
+    ]
+  }
+}

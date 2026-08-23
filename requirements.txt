@@ -1,0 +1,37 @@
+# Pinned to the versions in the working local .venv (Python 3.11.15).
+#
+# pyproject.toml carries the loose floors that define what the package *needs*;
+# this file records the one combination that is known to run, so a fresh machine
+# reproduces it rather than resolving to whatever is newest. Regenerate after a
+# deliberate upgrade, not to paper over a resolver conflict.
+#
+#   python3.11 -m venv .venv && source .venv/bin/activate
+#   pip install -r requirements.txt && pip install -e .
+
+numpy==2.4.6
+scipy==1.17.1
+opencv-python==5.0.0.93
+open3d==0.19.0
+trimesh==5.0.0
+torch==2.13.0
+torchvision==0.28.0
+matplotlib==3.11.1
+imageio==2.37.4
+imageio-ffmpeg==0.6.0
+pillow==11.3.0
+mujoco==3.11.0
+# scripts/sim/play_policy.py runs exported RSL-RL policies
+onnxruntime==1.29.0
+transformers==5.15.0
+pycocotools==2.0.11
+requests==2.34.2
+websocket-client==1.9.0
+
+# Texture/UV utilities under scripts/tools/. xatlas is present in the .venv;
+# pymeshlab and rembg are NOT -- install them via `pip install -e '.[texture]'`
+# only when running the bake path, they are not needed for the main pipeline.
+xatlas==0.0.11
+
+# VLM / search helpers under skills/.
+groq==1.6.0
+tavily==1.1.0

@@ -1,0 +1,736 @@
+=== VIDEO-TO-3D SESSION STATE — 2026-08-18 ===
+
+RUN: small_factory (input/Small-factory/small_factory_final.mp4) at maximum quality
+Branch: v3d-rewrite.  Strategy document: "docs/state/strategy-context.md"
+
+================================================================================
+WHERE THE RUN STANDS
+================================================================================
+
+  [DONE]  stage the RUN kernel, every component proved      STAGE_OK
+  [DONE]  frames + camera poses from the video              INGEST_OK
+  [DONE]  measure the maximum DA3 resolution                RESOLUTION_OK
+  [DONE]  test cross-chunk depth scale agreement            CHUNK_SCALE_OK
+  [DONE]  DA3 depth + 8 M point cloud                       DA3_OK
+  [DONE]  PGSR 69,000 iters, 636,362 gaussians, PSNR 24.80  PGSR_OK
+  [DONE]  mesh 39.8 M tris + 601 mesh-guided masks          MESH_OK
+  [DONE]  SAM 3 fetched, mirrored, keys verified            see section 6
+  [DONE]  SAM3 14,905 masks -> lift3d -> 82 objects         SEMANTICS_OK
+          *** Stage J = FAIL. It is CORRECT to fail; see section 9. ***
+  [DONE]  geometric object cut: 41 objects, audit 5/5 PASS
+  [DONE]  HoliSpatial -> Hunyuan3D Adapter A (38 objects)   OUTPUT_D/adapter_a (A ∪ B Union Mask)
+  [DONE]  Hunyuan3D-2mv Step F GPU Batch Gen (38 objects)   OUTPUT_F (38 meshes in 421s on RTX 6000)
+  [DONE]  Adapter B: Step G & H Multi-View Alignment (38)   OUTPUT_G (4-angle yaw search, best IoU)
+  [DONE]  Step I: Full Factory 3D Scene Assembly (38)       OUTPUT_I (full_factory_scene.glb, MuJoCo MJCF)
+  [RUNNING] terrain, MJCF, 10 videos                        kernel_outputs.py
+  [    ]  assemble + push to a Kaggle dataset from BUILD    kernel_assemble_delivery.py, deliver.py
+  [NOT BUILT] Spatial QA          (paper's qa_generation/ untouched)
+  [NOT BUILT] policy benchmark    (configs/test_policy_config.json consumed by nothing)
+
+RESULTS SO FAR (all lengths DA3 units, scale = assumed):
+  point cloud   8,000,000 points (the paper hardcodes 4,000,000)
+  gaussians     636,362; PSNR 23.18 @16k -> 24.80 @69k, L1 0.0389 -> 0.0301
+  mesh          20,325,912 verts / 39,823,099 tris at voxel 0.002707
+                num_cluster=1 would have deleted 2,077,650 tris (5.2%)
+  SAM3          14,905 masks, 600/600 images, 22/23 classes, median conf 0.754
+  semantic      82 objects from lift3d  -- Stage J FAIL
+  geometric     41 objects from decompose.cut -- audit 5/5 PASS
+  mesh floor    spans 96.3% of the footprint, 3.8 M points
+
+================================================================================
+0. TWO UPSTREAM BUGS FOUND AND FIXED THIS SESSION -- READ THESE FIRST
+================================================================================
+
+*** A. PGSR NEVER RECEIVED THE DA3 DEPTH SUPERVISION. ***
+inference_da3_scannetppv2.py:612 WRITES depth to <scene_dir>/depth_da3/.
+PGSR/scene/cameras.py:70-90 LOOKS FOR IT under a sibling tree,
+<parent-of-scannetppv2>/DptV3/data/<scene>/depth_da3/, which only existed on the
+authors' machine. It also resolved the wrong scene: parts.index("data") returns
+the FIRST "data" in the path, so /tmp/data/scannetppv2/data/<scene>/... gave
+scene = "scannetppv2".
+
+The failure is silent. cameras.py:163 prints "[Warning] depth not found" once per
+camera and leaves depth_map None; train.py:226-236 then skips its L1 depth term.
+Training runs to completion, reports a falling loss, and never uses the depth.
+Six hundred warnings scroll past during camera loading and nothing else says so.
+
+Measured effect of fixing it, same scene, same everything else:
+    depth-not-found warnings     600  ->  0
+    gaussians at ~2.5k iters     616,876  ->  2,902,811
+The depth term materially changes densification. Anyone re-running this pipeline
+on a different root MUST check for those warnings.
+Patched in apply_offline_patches as DEPTH_PATH_BEFORE/AFTER, and
+scripts/kernel/kernel_pgsr.py now resolves the path through the paper's own function and
+REFUSES TO TRAIN if the file is absent -- before an hour of GPU time, not after.
+
+*** B. THE PAPER'S CHUNKED DA3 PATH CANNOT RUN AT ALL. ***
+chunk_inference returns CUDA tensors (line 465 is a torch.cat on device) and
+line 756 hands a list of them to np.concatenate, which raises "can't convert
+cuda:0 device type tensor to numpy". It has never fired because chunking only
+engages at >= MAX_CHUNK_SIZE = 800 views. Forcing chunking to fit higher
+resolution makes the path live. Patched as CHUNK_TO_HOST_BEFORE/AFTER; moving each
+chunk to the host also frees its VRAM before the next forward pass.
+
+Also worth knowing: pytorch3d is NOT needed. The whole paper repo imports one
+symbol, quaternion_to_matrix. v3d/geometry/pytorch3d_shim.py supplies it and
+verify() proves the convention against scipy: correct ordering agrees to 4.44e-16
+while the deliberately swapped ordering differs by 1.9971, which is what makes the
+first number meaningful. install() writes a package PGSR can import.
+
+
+================================================================================
+1. KERNELS
+================================================================================
+RUN    RTX PRO 6000 Blackwell, 95.0 GiB usable, sm_120, NO internet
+       torch 2.10.0+cu128, numpy 2.0.2, transformers 5.0.0, nvcc 12.8, python 3.12
+BUILD  CPU only, HAS internet, kaggle CLI at /usr/local/bin/kaggle
+       -> this is the host that pushes outputs to Kaggle datasets
+
+Measured: BUILD->RUN relay 23.8 MB/s.  laptop->kernel ~4.6 MB/s.
+Rule: artefacts never touch the laptop. Push to a Kaggle dataset from BUILD.
+
+Attached datasets (all present and verified):
+  traoanhuy/v3d-build-cache-sm120       3.60 GB  120 wheels + 2 PGSR sm_120 wheels
+  traoanhuy/v3d-da3nested-giant-large   6.76 GB  DA3 checkpoint
+  traoanhuy/v3d-sam31-multiplex         3.58 GB  sam3.1_multiplex.pt + official src
+
+================================================================================
+2. STAGING — scripts/kernel/kernel_stage.py, reports STAGE_OK
+================================================================================
+Installs are an ALLOWLIST, never deps/*.whl. The cache also contains torch 2.13.0,
+numpy 2.5.2, pandas 3.0.5 and a CUDA 13 runtime; installing any of them replaces
+the torch/numpy the two PGSR sm_120 extensions were compiled against. Both pins
+are re-checked in a fresh process after every install phase.
+
+Proved by running the thing, not by reading a version:
+  open3d 0.19.0          ScalableTSDFVolume built, mesh clustered
+  plyfile                PlyElement round trip
+  simple_knn.distCUDA2   finite distances over 50,000 real points on sm_120
+  diff_plane_rasterization  exports rasterize_gaussians
+  nvdiffrast             RasterizeCudaContext covers 1352 px of a test triangle
+  evo                    PosePath3D imports (DA3's pose_align needs it)
+  pycocotools, skimage   RLE encode; morphology
+  depth_anything_3       api imports
+
+*** nvdiffrast is docs/reference/deb-technical.md P1-1, which blocked masks -> SAM3 -> boxes across
+    previous sessions. RESOLVED: built for sm_120 in 27 s. 1352 px is the same
+    figure the runbook recorded, so the backend agrees with the earlier check. ***
+
+Gaps found and closed:
+  - evo, pycocotools, scikit-image were absent from the cache and are hard
+    imports. Downloaded on BUILD under constraint numpy==2.0.2, relayed.
+    pandas/seaborn came down as evo's transitive deps and are deliberately NOT
+    installed (pandas 3.0.5 needs numpy>=2.1). evo only reaches pandas through
+    evo.tools.pandas_bridge, which DA3 never imports.
+  - two cache entries are sdists nested one directory deeper than their name
+    (deps/iopath-0.1.10/iopath-0.1.10/setup.py) on a read-only mount; copied to
+    /tmp and built there.
+  - open3d's import chain is settled by asking the interpreter what it wants
+    rather than enumerating it. It wanted janus.
+  - DA3 is NOT pip-installed: it declares hatchling as its build backend, absent
+    from the cache, so even --no-build-isolation fails (pip imports the backend).
+    It is pure Python -> a .pth in site-packages is the whole install.
+    CAVEAT: a .pth does not affect the already-running IPython kernel, whose
+    sys.path was fixed before the file existed. Add the path explicitly there.
+
+================================================================================
+3. INGEST — scripts/kernel/kernel_ingest.py, reports INGEST_OK
+================================================================================
+Video: 3458 frames, 57.69 s, 1920x1080 @ 59.94 fps.
+
+Frames selected by ACCUMULATED PARALLAX, not by time:
+  sharpness      median 23.4, p10 10.0
+  pan/parallax   3.47 px / 1.37 px  -> ratio 0.396
+  kept           600, at 1.79 px parallax spacing
+  rejected       153 blurred, 7 mis-exposed, 393 too close
+
+The 0.396 ratio is the number to read: this is a real WALK, not a pan. A tripod
+pan has parallax near zero and triangulates nothing however many frames it gives.
+
+Poses: DA3, no pose input, 600 views at process_res 504.
+  processed at   504x280
+  intrinsics     fx 1760.1 fy 1780.6 cx 960.0 cy 540.0  (hfov 57.2 deg)
+  focal spread   0.037 relative, no time trend -> one scene intrinsic is justified
+  round trip     rotation err 3.3e-16, translation 1.8e-15, det in [1.0000,1.0000]
+  trajectory     path 20.40 over extent 6.07 -> ratio 3.36 (a walk)
+  split          525 train + 75 test
+  peak VRAM      57.2 GiB of 95.0, in 62 s
+
+*** SCALE IS "assumed" AND MUST STAY LABELLED THAT WAY. ***
+Nothing in a video fixes metres. Every length in this run is in DA3's own units;
+transforms_undistorted.json carries v3d_scale_mode: "assumed". This project has
+already shipped a room measured 8.6 m tall with a validator passing it 16/16, and
+the mechanism was exactly this field not existing. Stage J must report RELATIVE
+proportion error, not an absolute figure.
+ONE TAPE MEASUREMENT of anything identifiable in the video converts every output
+from proportion to metres. It is the cheapest large improvement available.
+
+================================================================================
+4. RESOLUTION — scripts/kernel/kernel_da3_maxres.py, reports RESOLUTION_OK
+================================================================================
+The paper leaves DA3 at process_res=504 with upper_bound_resize, which scales the
+LONGEST side. model_inference.py:128 maps {"high_res": "lower_bound_resize",
+"low_res": "upper_bound_resize"} -- so the default is DA3's own LOW-res preset.
+For 1920x1080 that predicts depth at 504x280 = 141,120 samples and bilinearly
+upsamples to 2,073,600: 14.7x areal interpolation. That ceiling reaches past the
+point cloud -- PGSR/scene/cameras.py:89 reads depth_da3/*.npy as TRAINING
+SUPERVISION, so DA3's real resolution feeds the final surface too.
+
+Raising it is safe from the assertion at inference_da3_scannetppv2.py:588:
+api.py:352 overwrites prediction.intrinsics with the INPUT matrix before anything
+compares them, so the difference is exactly zero at any resolution. The authors'
+own note on the commented-out line says "this can lead to OOM issue" -- a memory
+reason, not an accuracy one.
+
+MEASURED (probes chosen to separate token cost from view cost):
+  A  600 views @  504  ->  504x280     432,000 tok   peak 57.2 GiB   61 s
+  B  300 views @  504  ->  504x280     216,000 tok   peak 32.8 GiB   19 s
+  C  150 views @ 1008  -> 1008x574     442,800 tok   peak 59.0 GiB   63 s
+
+A vs C at equal token count: 57.2 vs 59.0 GiB. At moderate resolution the cost is
+TOKEN-DRIVEN -- views and resolution trade one for one, and cross-view attention
+is NOT quadratic in the view count. That answers the open question in
+docs/reference/audit-prompt-da3-resolution.md.
+
+Escalation, resolution first, chunk size giving way:
+   50 views @ 1920  ->  OOM (tried to allocate a single 7.89 GiB block)
+   40 views @ 1920  ->  OOM
+   30 views @ 1920  ->  OK, peak 70.7 GiB, 38 s
+
+CHOSEN: process_res 1920, upper_bound_resize, 30 views per chunk
+  depth predicted at   1918x1078 = 2,067,604 real samples per frame
+  vs the paper's 504   141,120  ->  14.65x more real depth
+  remaining upsample   1.0x areal (was 14.7x) -- essentially none
+  chunks               20, for 600 frames
+  measured peak        70.7 GiB of 95.0
+  total real samples   1,240,562,400
+
+HONEST LIMIT OF THE FITTED MODEL: peak = 8.15 + 114.2 GiB/Mtoken fits the three
+probes to 0.25 GiB, but UNDER-PREDICTS 30v@1920 by ~60% (44 predicted, 70.7
+measured). At native per-view resolution the decoder's activations dominate and
+token count stops being the right variable. This is exactly why the script
+measures each rung instead of trusting the fit, and why the backoff exists.
+
+TWO OPEN RISKS WITH 20 CHUNKS -- ONE NOW MEASURED AND IT FAILED:
+
+(a) SCALE CONSISTENCY -- TESTED, AND NATIVE-RESOLUTION CHUNKING IS REJECTED.
+    scripts/kernel/kernel_chunk_scale.py infers two OVERLAPPING view sets as separate
+    calls and compares the depth each produces for the frames they SHARE. Same
+    frames, same supplied poses, different chunk company: if the scale fit is
+    stable the ratio is 1.0.
+
+      30 views @ 1920 (the chosen config)  median ratio 0.97995  -> 2.0% off
+      200 views @ 1008 (the fallback)      median ratio 1.00113  -> 0.11% off
+
+    The right statistic is the deviation of the MEDIAN ratio, not the worst frame:
+    api.py:362 applies ONE scalar per inference call, so a chunk can only be wrong
+    by one number, and the frame-to-frame spread around it is DA3's own prediction
+    noise, present within a single chunk too. Gating on the worst frame would
+    reject a configuration for noise chunking did not cause.
+
+    2.0% on a ~6-unit room is ~12 cm of region-dependent scale error, against a
+    +/-5 cm target -- and PGSR reads these same depth maps as supervision, so it
+    would be baked into the surface. The per-frame ratios also DRIFT
+    monotonically (0.990, 0.994, 0.980, 0.972, 0.966), which is a systematic scale
+    difference and not scatter.
+
+    *** CONCLUSION: native resolution with 20 chunks is NOT the highest-quality
+        configuration. It is higher-resolution but geometrically inconsistent.
+        The highest configuration that PASSES is process_res 1008 at 200 views
+        per chunk: 4.1x the paper's real depth, 3 chunks, 0.11% scale agreement.
+        That is what the production run uses. ***
+
+(b) The paper's chunking randomises view order
+    (inference_da3_scannetppv2.py:746, unseeded). Thirty RANDOM views out of 600
+    spanning a 20-unit walk may barely overlap, and DA3 predicts worse depth
+    without overlap. At 200 views per chunk this is far less of a concern.
+
+ROUTE TO NATIVE RESOLUTION, NOT YET BUILT: run one globally-consistent pass at
+process_res 504 over all 600 views (measured: 57.2 GiB, ONE call, so zero scale
+inconsistency), then run native-resolution chunks and rescale each chunk by the
+median depth ratio against that reference on the same frames -- one scalar per
+chunk. The low-resolution pass supplies the scale, the high-resolution pass
+supplies the detail. This would give 14.65x real depth AND consistency, and every
+quantity it needs is already measurable. Estimated ~15 min of GPU plus the driver.
+
+CHOSEN FOR THIS RUN: process_res 1008, upper_bound_resize, 200 views/chunk
+  depth predicted at   1008x574 = 578,592 real samples per frame
+  vs the paper's 504   141,120  ->  4.10x more real depth
+  remaining upsample   3.6x areal (was 14.7x)
+  chunks               3, for 600 frames
+  cross-chunk scale    0.11%
+
+
+================================================================================
+5. DOUBLING THE POINT CLOUD — what it buys
+================================================================================
+Two call sites pass target_num_points=4000000
+(inference_da3_scannetppv2.py:753,762) while the function's own default and
+docstring say 20 million (line 469,476).
+
+At 600 frames x 2,067,604 real samples (native res) there are ~1.24 BILLION
+measured points before confidence filtering. Keeping 4 M is 0.3% of them, so the
+cut discards MEASUREMENTS, not interpolation. Doubling to 8 M recovers real
+surface rather than inflating a count -- and there is room to go far higher.
+
+PGSR/scene/gaussian_model.py:170-189 turns EVERY point in the PLY into an initial
+gaussian with no downsampling, so 8 M doubles initialisation memory. The pilot
+started from 4 M and finished at 1.25 M after opacity pruning, so the initial
+count does not bound the final model -- but it does bound peak VRAM at iteration
+zero. Measure it; do not assume.
+
+Now environment-driven, defaults equal to the paper's literals:
+  V3D_PROCESS_RES  V3D_PROCESS_RES_METHOD  V3D_TARGET_POINTS
+  V3D_CONF_THRESHOLD  V3D_MAX_CHUNK_SIZE
+NOTE: V3D_MAX_CHUNK_SIZE must be set to 30. The paper only chunks at >= 800
+views, so 600 frames would otherwise go through in one call and OOM.
+
+THE PATCH MECHANISM ITSELF WAS A DEFECT, NOW FIXED:
+apply_offline_patches recorded applied=False both when a patch was already in
+place AND when its anchor text was not found at all, printing the same word for
+both. One character of upstream drift would silently stop a patch applying. Every
+patch is now verified against its OWN OUTPUT; absent both ways raises PatchError
+before the weights load. For the point-cloud and resolution patches a silent
+no-op would mean running the paper's settings and reporting them as this run's.
+
+================================================================================
+6. SAM 3 -- UNBLOCKED, AND IT IS THE RIGHT CHECKPOINT
+================================================================================
+HF_TOKEN is now in .env and authenticates as user `huytrao123` -- the account the
+runbook recorded as having the approved gate. facebook/sam3 is "gated": "manual",
+and without the token both files return HTTP 401.
+
+Downloaded on BUILD and relayed to RUN at 49-51 MB/s (faster than the 24 MB/s the
+runbook recorded), byte-verified 6,895,104,000 bytes:
+  /tmp/sam3/sam3.pt            3450.1 MB
+  /tmp/sam3/model.safetensors  3439.9 MB
+  /tmp/sam3/tokenizer.json + configs
+
+*** THE ARCHITECTURE QUESTION IS SETTLED. ***
+The runbook warned that sam3.1_multiplex.pt is NOT a drop-in for the paper's
+build_sam3_image_model: loading it left four convs.3 tensors randomly initialised,
+because the 3.1 checkpoint builds convs.0-2 from dconv_2x2_* modules while the
+image model expects four blocks of conv_1x1/conv_3x3.
+
+Inspected the real sam3.pt state dict (1465 tensors, top-level prefixes
+['detector', 'tracker']). All four are PRESENT:
+  detector.backbone.vision_backbone.convs.3.conv_1x1.weight  (256, 1024, 1, 1)
+  detector.backbone.vision_backbone.convs.3.conv_1x1.bias    (256,)
+  detector.backbone.vision_backbone.convs.3.conv_3x3.weight  (256, 256, 3, 3)
+  detector.backbone.vision_backbone.convs.3.conv_3x3.bias    (256,)
+conv blocks 0,1,2,3 all present, 16 conv_1x1 tensors in total.
+So the real SAM 3 is the drop-in, the gate was the only blocker, and the semantic
+half of the pipeline can run as the paper published it.
+
+Set V3D_SAM3=/tmp/sam3/sam3.pt (PipelineConfig.sam3_checkpoint defaults to
+/kaggle/working/sam3, which is not where this landed).
+
+MIRROR: pushed to a PRIVATE Kaggle dataset traoanhuy/v3d-sam3-image so a session
+restart does not require the gated download again. Private deliberately -- Meta
+gates these weights manually, and a public mirror would circumvent that gate.
+
+================================================================================
+7. CUTTING OBJECTS OUT -- BUILT AND SELF-TESTED (src/v3d/scene/decompose.py)
+================================================================================
+The user asked for research into cutting objects out. The obvious route is through
+semantics (VLM -> SAM3 -> lift masks) and it has three weaknesses: it can only
+produce objects whose class a VLM named, it needs the gated checkpoint, and
+text-prompted masks are one mask per CLASS per frame so five pallets in a row
+become one region. So this takes the geometric route, which needs no model and is
+therefore NOT blocked by the SAM3 gate: find the room's shell, remove it, and what
+falls out in separate pieces are the objects. Semantics later LABELS them.
+
+Three criteria decide what is shell, and all three were necessary -- each was added
+because the synthetic self-test failed without it:
+
+  1. SPAN, not flatness. A machine housing and a wall are both planar; only the
+     wall spans the room. Without this the flat side of every crate is deleted.
+  2. HALF-SPACE removal, not inliers. A reconstructed wall has thickness, so its
+     far surface is a second plane outside any sane tolerance. Deleting only the
+     near face left the far one as a large flat phantom "object": 27 objects where
+     there were 3.
+  3. BOUNDARY position. A plane must sit at the scene's extreme along its own
+     normal. Without this, a plane fitted across the room's middle was classified
+     as a wall and its half-space deleted a crate standing behind it.
+     Threshold 0.06, chosen between two MEASURED populations: the six real shell
+     planes sit at edge 0.012-0.031, a thin panel 1 unit in front of the far wall
+     sits at 0.13. At 0.15 the panel was absorbed and deleted -- and a factory is
+     full of that shape (cage panels, signage, machine guards).
+
+Two guards on half-space removal, both from the same test: no single plane may
+claim >45% of the mesh, the accumulated removal may not exceed 90%, and if
+half-space removal leaves under 2% of the mesh it is rejected wholesale in favour
+of inlier-only removal. The two errors are not symmetric -- keeping phantoms is
+recoverable and the audit flags them, deleting every object is not.
+
+SELF-TEST: scripts/sim/selftest_decompose.py, reports SELFTEST PASS.
+A room built with up = +Y (so no hardcoded axis can pass by luck) holding a crate,
+a cabinet, and a deliberately thin panel. Measured:
+
+  object          centre error    extent error
+  panel           0.044           12%
+  cabinet         0.056           33%
+  crate           0.025           25%
+  up axis         [-0.0, 1.0, -0.0], derived from the cameras
+  room height     3.104 vs true 3.000
+  audit           5/5 PASS
+  height map      0.18% holes, MJCF compiles, 1000 steps stable
+
+Centres are accurate; extents run 12-33% large. On this test that is partly
+legitimate -- the synthetic room is built from SOLID boxes, so shell removal
+correctly shaves the faces touching floor and walls, which a TSDF surface does not
+have. Treat extents as approximate until checked against real annotation.
+
+A BUG IN THE TEST ITSELF, worth remembering: matching found objects to true ones by
+sorted extent pairs the smallest with the smallest, which compared a panel fragment
+against a crate and reported "100% error" about the wrong pair. Match by CENTRE;
+extent is the thing being measured and must not also decide what to compare.
+
+ALSO FIXED IN THE TERRAIN EXPORT: height_map sized its surface sampling from the
+triangle count, giving roughly one sample per grid cell and 58% empty cells on a
+CLOSED room -- holes that are an artefact of undersampling and read downstream as
+pits a robot falls into. Sample count is now a ratio to the grid (16 per cell):
+58.49% -> 0.18%.
+
+================================================================================
+8. RULES THAT COST HOURS WHEN BROKEN
+================================================================================
+- Never pipe a deploy command through grep. kaggle_relay.py prints DONE even when
+  its assemble step raised, and a filter hid the traceback.
+- kaggle_executor.py exec defaults to a 600 s timeout. Pass --timeout.
+- /kaggle/working is 20 GB. /tmp has 1.1 TB. Big files go in /tmp, and a session
+  restart wipes it.
+- Kaggle's Contents API SILENTLY TRUNCATES PUTs near 24 MB, and
+  kaggle_executor.upload_file sends one unchunked PUT. Use scripts/kaggle/kupload.py: it
+  chunks and verifies a SHA256 computed ON THE KERNEL, because the local side
+  cannot detect a short write.
+- macOS tars carry ._* AppleDouble members; delete them after extracting.
+- A dropped websocket does not kill a stage -- the job is a kernel subprocess.
+  Check ps -ef before restarting anything.
+
+================================================================================
+9. TO RESUME
+================================================================================
+cd "/Users/traoanhuy/source_code/Full-pipeline-scan-terrain/Videos_to_3D "
+# proxies expire; refresh both in .env from each notebook's
+# (kebab menu) -> "Kaggle Jupyter Server" panel
+KX_KERNEL=run scripts/kaggle/kx.sh exec --timeout 300 "print('alive')"
+
+# everything already staged survives in /tmp unless the session restarted:
+#   /tmp/paper/holi-spatial            the paper's code
+#   /tmp/da3src/Depth-Anything-3       DA3 source (on a .pth)
+#   /tmp/DA3NESTED-GIANT-LARGE         -> attached dataset
+#   /tmp/sam3bundle                    -> attached dataset
+#   /tmp/data/scannetppv2/data/small_factory/   600 frames + transforms
+#   /tmp/run/da3_resolution_small_factory.json  the resolution report
+# after a RESTART, re-run in order:
+#   scripts/kernel/kernel_stage.py  then  scripts/kernel/kernel_ingest.py
+
+
+================================================================================
+9. STAGE J FAILED, AND THAT IS THE SYSTEM WORKING
+================================================================================
+lift3d and postprocess RAN for the first time in this project (docs/reference/deb-technical.md P1-2,
+P1-3 both closed). 82 objects, scene.json written. Stage J then returned FAIL:
+
+  [FAIL] no_assumed_room_geometry   room.ceiling marked 'assumed'
+  [FAIL] no_object_larger_than_room room volume 20.9; oversized obj_machine_43,44
+  [FAIL] no_stray_objects           36/82 reach past the footprint, worst 0.92,
+                                    limit 0.28
+
+ROOT CAUSE, and it is one thing, not three. scene.json's floor polygon is a thin
+quadrilateral spanning 5.90 x 1.43:
+  [0.698,1.752] [-4.989,1.716] [-5.197,0.318] [0.490,0.353]
+Three independent witnesses disagree with it:
+  fused mesh extent      6.013 x 3.735 x 6.348
+  camera path extent     4.922 x 0.831 x 3.454
+  mesh FLOOR PLANE       3,798,304 points spanning 96.3% of the footprint
+The mesh floor covers essentially the whole footprint, so the lifted floor is
+UNDER-SEGMENTED -- it captured a walkable strip, not the floor. The oversized and
+stray-object failures are consequences of an undersized footprint, not of bad boxes.
+
+*** This is the opposite of the failure this project had before. A validator once
+returned 16/16 PASS on a room 8.6 m tall. This one refused to certify a scene whose
+shell it could not reconcile. Do not "fix" it by loosening the gate. ***
+
+FIX, not yet applied: derive the room shell from the MESH (decompose.find_shell
+already does this correctly and its audit passes) rather than from lifted floor
+instances, and have from_holi consume that shell.
+
+================================================================================
+10. FOUR BUGS IN THIS SESSION'S OWN CODE, FOUND BY RUNNING IT
+================================================================================
+Recorded because each was silent and each would have shipped a wrong artefact.
+
+A. mask_index.json schema guessed. Its shape is
+   {scene,image_root,mask_root,items:[{image,label,mask_path,mask_rle,bbox,score}],
+   missing_images}. The reader looked for "masks"/"entries", found none, and
+   reported "0 masks, 23 classes with ZERO masks" for a stage that had produced
+   14,905 masks. A working stage was reported as a total failure. The reader now
+   RAISES if 'items' is absent instead of returning an empty count.
+
+B. stage_scene printed "room 5.69 x 1.41 x 2.60 m" for DA3 units. That is exactly
+   the mislabelling behind the 8.6 m room, in new code. Unit now comes from the
+   document's scale mode.
+
+C. _boxes_video looked for size_m/extent; the schema is box.size/box.center. It
+   would have found zero boxes, silently fallen back to the geometric cut, and
+   labelled a semantic run "geometric". Now raises rather than falling back.
+
+D. The @step decorator executed each step at DEFINITION time and the steps were
+   also called explicitly, so all seven ran twice -- doubling render and GPU cost
+   while merely looking slow.
+
+Also: turntable_video takes a PATH and reads it with read_triangle_mesh, which
+returns an EMPTY mesh for a point-cloud PLY -- a blank orbit with no error. The
+point cloud now has its own renderer.
+Also: libx264 rejects odd dimensions; a frame sized from an aspect ratio is odd half
+the time (1280x1275 here). encode() now crops to even and rejects an empty output.
+Also: MuJoCo's offscreen framebuffer defaults to 640x480 and must be declared in the
+MODEL (<visual><global offwidth/offheight>), not passed to the renderer.
+
+================================================================================
+11. TWO THRESHOLDS THE REAL SCENE CORRECTED
+================================================================================
+max_shell_edge_frac 0.06 -> 0.10. Tuned on a synthetic room where shell planes sat
+at edge 0.012-0.031 and a thin panel at 0.13. On the real reconstruction the genuine
+CEILING sits at 0.08 and was rejected as an interior plane, so the room came out
+2.31 tall with no ceiling. At 0.10 the ceiling is found (span_frac 0.979) and the
+synthetic selftest still PASSES. A TSDF ceiling is nowhere near as flush with its
+bounding box as a modelled one.
+
+traversability floor definition. "Walkable floor" was any cell within 12% of the
+height range, which includes the BASE OF EVERY MACHINE standing on the floor -- so
+the step from floor to machine side was reported as terrain relief. The factory
+scene gave step p95 1.76 and slope p95 88 degrees, which describes the side of a
+machine. Walkable floor now excludes cells within step_radius of an obstacle, and
+low_cells_fraction / excluded_as_obstacle_margin are both reported so the
+contamination stays visible.
+
+Still worth knowing: the height map had 26.18% holes (no surface sample, filled from
+the nearest observed cell) and the MJCF rollout reached max |qvel| 54.8 after 600
+steps with 63 overlapping object pairs -- objects are not settling, which points at
+interpenetration at spawn. Neither is fixed.
+
+
+================================================================================
+12. DELIVERED, AND WHAT REMAINS
+================================================================================
+DATASET  https://www.kaggle.com/datasets/traoanhuy/v3d-small-factory-scene
+  v2  2.94 GB / 141 files  -- complete pipeline output, PUSH_OK
+  v3  4.62 GB / 198 files  -- adds exchange/ interchange formats
+Depth maps are EXCLUDED on the user's instruction (they were 4.98 GB / 600 files).
+
+exchange/ formats, each verified by reading the file back and comparing counts:
+  mesh_1.5M.glb        30.6 MB  1,500,000 faces re-read OK   (trimesh, Y-up)
+  objects_scene.glb     8.4 MB    400,000 faces re-read OK   (trimesh, Y-up)
+  mesh_1.5M.obj/.stl            universal / printing
+  objects_obj/          43 per-object OBJ files
+  point_cloud_8M.pcd            PCL and ROS
+  scene.urdf            44 links, box collision, XML parses
+  height_map.asc                Esri ASCII grid, re-read (510,512)
+  terrain_surface.obj           height map as 520,198 triangles
+
+*** OPEN3D WRITES glTF IT CANNOT READ (bugs-found B9 confirmed again). Its GLB
+declared a buffer view longer than the file -- at 537 MB and again at 17 MB. trimesh
+writes valid glTF and round-trips. Do not trust an Open3D .glb without reading it
+back with something else. ***
+Also: trimesh.simplify_quadric_decimation needs fast_simplification, which is not
+installed. Decimate with Open3D, export with trimesh -- each library for the half it
+can do.
+
+================================================================================
+13. NATIVE-RESOLUTION DEPTH: ATTEMPTED TWICE, MEASURED, REJECTED
+================================================================================
+Native 1918x1078 is 14.65x the paper's real depth per frame against the 4.1x this
+run shipped, and it fits in memory at 30 views per call. It is still not usable, and
+the reason is not memory.
+
+Every model.inference call fits its own Umeyama scale and divides its depth by it
+(api.py:353-362). Twenty calls means twenty scales. scripts/kernel/kernel_da3_native.py
+tried to remove that by running ONE reference pass over all 600 views at 504 (57.2
+GiB, globally consistent by construction) and correcting each native chunk by a
+single scalar fitted against it.
+
+Measured by scripts/kernel/kernel_verify_native.py, which reads only the depth maps on disk:
+
+  estimator                        cross-chunk excess over the within-chunk floor
+  median-of-medians                          +9.11 points
+  matched-pixel (area-pooled)                +6.92 points
+  tolerance                                   1.00 point
+
+The second estimator is the right one -- comparing a median over 1918x1078 against a
+median over 504x280 compares different pixel populations, and native resolves thin
+and near structures the low-resolution pass never sees. Fixing it helped by 2.2
+points and did not come close.
+
+WHY IT CANNOT WORK, from the in-chunk ratio spread diagnostic: for 14 of 20 chunks
+the per-frame native/reference ratio varies by 0.7-2.3% (near the 0.86% noise floor),
+so one scalar is the right correction. For 6 chunks it reaches 6-27%. Where the
+spread is 27% the discrepancy is NOT a per-call scale -- the model predicts different
+relative geometry at 14.65x the resolution, not merely rescaled geometry -- and no
+per-chunk scalar can remove it.
+
+The 20 M-point native cloud was DELETED rather than delivered. It would have been the
+most impressive artefact in the set and was measured at ~7% region-to-region scale
+inconsistency.
+
+If someone wants to try again: the two axes are chunk composition (contiguous gives
+good view overlap and badly-conditioned scale fits; spread gives the opposite) and
+chunk size (only 30 views fit at native resolution, which is what forces the choice).
+A per-frame rather than per-chunk correction is NOT the answer -- it would flatten
+genuine depth variation between frames.
+
+================================================================================
+14. THE ONE COMMAND THAT WOULD IMPROVE THIS MOST
+================================================================================
+The densification retrain, which needs ~2.5 h and did not fit the session:
+
+  scripts/kaggle/kstage.sh scripts/kernel/kernel_pgsr.py start V3D_SCENE=small_factory \
+      PYTORCH_ALLOC_CONF=expandable_segments:True
+
+The flags are already derived and were verified on a live process:
+  --densify_grad_threshold 0.00010000     (paper 0.0002)
+  --densify_abs_grad_threshold 0.00040000 (paper 0.0008)
+  --iterations 69000  --position_lr_max_steps 69000
+  --densify_from_iter 1000  --densify_until_iter 34500
+Success criterion: gaussians above 636,362. The previous model is parked at
+/tmp/run/gs/small_factory_densify0.0002 so the change can be MEASURED, not assumed.
+Then: kernel_mesh.py -> kernel_semantics.py -> kernel_outputs.py -> deliver.py.
+
+NOTE ON RESUMING: you cannot continue the old model. checkpoint_iterations defaulted
+to [] so no .pth exists (only the gaussian PLY, which restore() does not accept), and
+densify_until_iter=34500 of 69000 means densification was already off for the second
+half -- a lower threshold would be read by nothing.
+
+================================================================================
+15. LIFT3D / POSTPROCESS HISTORY WRITTEN UP
+================================================================================
+docs/reference/lift3d-postprocess-history.md records the first successful run of
+P1-2/P1-3: what blocked it (nvdiffrast, the SAM3 gate, two offline traps in the SAM3
+package, and manifold3d), what came out, and the finding that matters more than the
+milestone --
+
+  49 of the 82 semantic objects are `label` and `sticker`, i.e. flat printed
+  markings, while NINE classes SAM3 found masks for were filtered to ZERO 3D
+  instances by lifting: box button gauge knob lever panel switch table tool.
+
+That is most of the machinery in a control-panel factory. "lift3d runs" is true and
+is NOT the same as "the semantic boxes are useful". The next work on that stage is
+--min-points and --erode-pixels and probably per-instance prompting, not making it
+execute.
+
+
+================================================================================
+§16  THE RECONSTRUCTION IS NOW A UNITREE MUJOCO SCENE WITH THE ROBOT IN IT
+================================================================================
+
+Request: "transfer result after lifting3D to 3d environment and can put it into it"
+then "I want devide factory has a door and robot in the terran, terrain must have
+texture color".
+
+Delivered, and VALIDATED (scripts/sim/validate_unitree_scene.py, all five checks pass):
+
+  scripts/sim/make_unitree_scene.py      builds the scene from scene_layout.json,
+                                     height_map.npy and terrain_texture.png
+  scripts/sim/validate_unitree_scene.py  five checks, each able to fail
+  scripts/sim/render_unitree_scene.py    4 stills + an orbit mp4
+
+Written into the unitree repo (unitree_robots/vr_h3_2/{origin,meshes}/):
+  scene_factory.xml            the scene; includes rl + sensors + actuators
+  factory_hfield.png           16-bit heightfield, 512 x 510, cell 0.01183
+  factory_texture.png          the scene's own top-down colour, same grid
+  scene_factory_report.json    every number this chose, with its evidence
+  scene_factory_terrain.npy    the terrain as written, so it can be checked
+simulate/config.yaml now points at origin/scene_factory.xml (original kept as a
+comment; config.yaml.bak is a full backup).
+
+WHAT THE SCENE CONTAINS
+  terrain   heightfield of the reconstructed surface, coloured by the real
+            top-down texture -- not a height ramp
+  walls     4 edges recovered by clustering the mesh's 7 RANSAC wall planes
+            (7 planes -> 4 edges: RANSAC fits a large surface more than once)
+  doors     3 openings, positioned where lift3d's door instances project onto
+            those walls -- obj_door_11 lands 0.003 from its wall
+  partition 1 ADDED dividing wall with a 1.20 x 2.05 doorway, at u=1.88 where it
+            crosses 0% occupied cells and its approach corridor is 0% blocked.
+            Geoms named partition* are added; wall_* are reconstructed.
+  robot     vr_h3_2 at its own `home` pose, standing on the flattest, most open
+            floor cell (clear radius 1.03), one step from the partition doorway
+
+FIVE THINGS THAT WERE WRONG FIRST, AND HOW EACH WAS CAUGHT
+
+1. DOUBLE-REPRESENTED MACHINES -- and this is why the earlier MJCF never settled.
+   97% of the height map's tall interior cells sit under a detected object's box:
+   the machines ARE the terrain. The previous export added 43 object boxes on top,
+   i.e. inside solid ground -- 63 overlapping pairs, peak |qvel| 48.8. Representing
+   each machine once fixes it at the root. --objects-as-bodies is the other
+   consistent choice (carve them out AND add hull bodies) for manipulation work.
+
+2. WALLS COLLAPSED 7 -> 1. Offsets were compared without dividing by the normal's
+   component or subtracting the grid origin, so every plane looked like one edge.
+   Projected properly they are u=0.321, u=5.967, v=0.119, v=5.869 -- a closed room.
+
+3. A FIXED WALL BAND MADE THE DOORWAYS DECORATIVE. +/-9 cells left 0.24 units of
+   wall standing in front of two of three openings. The band is now measured from a
+   MEDIAN across-wall profile (median so a machine parked against a wall cannot drag
+   the band across the room): 0.26-0.38 units. All three openings then read clear.
+
+4. THE SPAWN LANDED OUTSIDE THE BUILDING. Removing the wall bands made the strip
+   *behind* each wall the flattest, most open ground on the map, so it scored best.
+   Fixed by bounding the search to the interior. The world is then shifted so that
+   cell is the origin, which means the robot's own `home` keyframe (35 values,
+   pelvis 0.841) places it correctly -- and survives a plain qpos0 reset, which a
+   rewritten keyframe would not.
+
+5. FOUR MEASUREMENT BUGS IN MY OWN CHECKS, each of which would have been reported
+   as a scene defect:
+   - MuJoCo CACHES ASSETS BY FILENAME WITHIN A PROCESS. Three different heightfield
+     orientations gave RMS identical to 0.01 mm because only the first was ever
+     read. Orientation must be measured one process per candidate.
+   - A ray cast down from the origin hits the ROBOT'S HEAD (1.718), not the floor.
+     Probes now skip every geom that is not terrain/wall/partition/object.
+   - The doorway probe ran AFTER 2 s of uncontrolled simulation, when the robot is
+     sprawled across the floor; it measured the robot's shoulder. Reset first.
+   - The camera-placement probe used +forward when MuJoCo puts the camera at
+     `lookat - distance * forward`. It probed the opposite side of the room, called
+     it clear, and rendered the inside of a wall. Twice.
+
+WHAT THE VALIDATION ACTUALLY SHOWS (not "it compiles")
+  heightfield vs source terrain, on locally flat cells: RMS 5.16 mm, worst 9.44 mm
+    (over ALL cells the tail reaches 1736 mm -- rays clipping the vertical sides of
+     machine columns. A probe artefact. Judge flat ground; report the tail.)
+  robot at home: pelvis 0.841, floor under it -0.007, clearance 0.848,
+    0 contacts penetrating over 5 mm
+  2 s uncontrolled: finite, peak |qvel| 8.87, pelvis 0.841 -> 0.265. It collapses
+    because nothing controls it; what matters is that it settles ON the terrain.
+  partition opening clear at 3 heights x 3 lateral offsets, and the partition does
+    block beside the opening (so it genuinely divides)
+  terrain texture 512x510 == the height grid, so colour lines up with elevation
+
+HONEST LIMITS OF THIS SCENE
+  - Lengths are DA3 UNITS. DA3 is metric, so 2.307 is its own ESTIMATE of the
+    ceiling, not an arbitrary number -- but unverified, and low for a factory. One
+    tape measurement sets --metres-per-unit and rescales every length, mass and
+    force. Masses and forces are meaningless until then.
+  - 20.7% of the terrain is INTERPOLATED floor (the wall bands). The floor under a
+    wall was never seen by the camera. Filled from nearby FLOOR cells, not nearest
+    cells -- nearest-fill borrowed machine heights and left a ledge along the wall.
+  - The partition is INVENTED. It is the only way to satisfy "divide the factory"
+    from a reconstruction that is one room. It is named partition* so it can never
+    be mistaken for evidence.
+  - The three reconstructed doorways lead OFF THE HEIGHTFIELD -- there is no
+    reconstructed floor outside the room. Walking out of one means walking off the
+    map. The partition doorway is the one that connects two real halves.
+  - Doorway SIZES are chosen (1.20 x 2.05), not measured. Only their POSITIONS come
+    from the data, because the same lift3d pass that produced them under-segmented
+    the floor badly enough to fail Stage J and called a 0.42 fragment a door.
+
+RUN IT
+  cd '/Users/traoanhuy/source_code/test reconstruct_3d/unitree_mujoco_si/simulate'
+  ./build/unitree_mujoco                       # config.yaml already points at it
+  ./build/unitree_mujoco -s origin/scene_factory.xml -r vr_h3_2   # or explicitly
+REBUILD IT
+  python3 scripts/sim/make_unitree_scene.py [--metres-per-unit X] [--objects-as-bodies]
+  python3 scripts/sim/validate_unitree_scene.py
+  python3 scripts/sim/render_unitree_scene.py
