@@ -1,0 +1,390 @@
+<title>One Video, One Dataset</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ink:#14171c; --body:#3a4049; --dim:#737a86; --line:#e3e0d9; --rule:#d9d5cc;
+  --bg:#fbf9f5; --card:#ffffff; --accent:#1c6448; --accent-soft:#e8f2ed;
+  --warn:#8f5512; --warn-soft:#faf1e4;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ink:#f2f0ec; --body:#c5c9d1; --dim:#8a8f9b; --line:#282b32; --rule:#282b32;
+  --bg:#111318; --card:#171a20; --accent:#63c99a; --accent-soft:#16281f;
+  --warn:#d9a05c; --warn-soft:#241c11;
+}}
+:root[data-theme="dark"]{
+  --ink:#f2f0ec; --body:#c5c9d1; --dim:#8a8f9b; --line:#282b32; --rule:#282b32;
+  --bg:#111318; --card:#171a20; --accent:#63c99a; --accent-soft:#16281f;
+  --warn:#d9a05c; --warn-soft:#241c11;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--body);
+  font:400 16px/1.68 Inter,ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:900px;margin:0 auto;padding:0 26px}
+h1,h2,h3{color:var(--ink);text-wrap:balance;margin:0;font-family:Newsreader,Georgia,serif}
+code,.m{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:.87em}
+
+header{padding:80px 0 46px;border-bottom:1px solid var(--rule)}
+.eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.15em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 16px}
+h1{font-size:clamp(36px,6vw,58px);font-weight:500;letter-spacing:-.02em;line-height:1.06}
+.lede{font-size:19.5px;line-height:1.6;margin:20px 0 0;max-width:62ch}
+.lede b{color:var(--ink);font-weight:600}
+
+section{padding:54px 0;border-bottom:1px solid var(--rule)}
+section:last-of-type{border-bottom:0}
+h2{font-size:29px;font-weight:500;letter-spacing:-.012em;margin-bottom:9px}
+h3{font-size:17px;font-weight:600;font-family:Inter,sans-serif}
+.sub{color:var(--dim);font-size:15.5px;margin:0 0 26px;max-width:64ch}
+
+.io{display:grid;grid-template-columns:1fr auto 1fr;gap:20px;align-items:center;margin:30px 0 0}
+.io-box{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:19px 21px}
+.io-box h3{margin:0 0 9px;font-size:15px}
+.io-box ul{margin:0;padding-left:17px;font-size:14.5px;line-height:1.85}
+.io-box li::marker{color:var(--accent)}
+.arrow{font-size:26px;color:var(--accent);text-align:center}
+@media(max-width:680px){.io{grid-template-columns:1fr}.arrow{transform:rotate(90deg)}}
+
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:13px;margin-top:26px}
+.k{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 17px}
+.k b{display:block;font-family:Newsreader,serif;font-size:29px;font-weight:500;
+  color:var(--ink);letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1}
+.k span{display:block;font-size:12.5px;color:var(--dim);margin-top:5px;line-height:1.4}
+
+.tw{overflow-x:auto;margin-top:16px}
+table{width:100%;border-collapse:collapse;font-size:14.8px;min-width:520px}
+th,td{text-align:left;padding:11px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);font-weight:600}
+td.n{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.hi td{background:var(--accent-soft)}
+.good{color:var(--accent);font-weight:600}
+
+figure{margin:0 0 20px}
+video,figure img{width:100%;display:block;border-radius:12px;border:1px solid var(--line);background:#0c0d10}
+figcaption{font-size:13.5px;color:var(--dim);margin-top:9px;line-height:1.5}
+figcaption b{color:var(--ink);font-weight:600}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:20px}
+
+.card{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--accent);
+  border-radius:0 12px 12px 0;padding:17px 20px;margin:15px 0}
+.card h3{margin:0 0 6px}
+.card p{margin:0 0 8px;font-size:14.8px}
+.card p:last-child{margin-bottom:0}
+.card .n{font-family:'JetBrains Mono',monospace;color:var(--ink);font-weight:500}
+.card.warn{border-left-color:var(--warn);background:var(--warn-soft)}
+.card.warn h3{color:var(--warn)}
+
+.pill{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:11px;
+  padding:2px 8px;border-radius:20px;background:var(--accent-soft);color:var(--accent);
+  margin-bottom:7px}
+
+.cta{display:inline-block;background:var(--accent);color:var(--bg);text-decoration:none;
+  padding:12px 22px;border-radius:9px;font-weight:600;font-size:15px}
+footer{padding:36px 0 70px;color:var(--dim);font-size:13.5px;line-height:1.7}
+</style>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">Kết quả nghiên cứu · Video-to-3D</p>
+  <h1>Một đoạn video vào. Toàn bộ dữ liệu 3D của căn phòng đi ra.</h1>
+  <p class="lede">Câu hỏi tôi đặt ra: <b>một đoạn video quay tay chứa được bao nhiêu thông
+  tin 3D, nếu ta khai thác đến cùng?</b> Câu trả lời là bảy lớp dữ liệu — hình học, ngoại quan,
+  ngữ nghĩa, vật thể tách rời — không cần LiDAR, không dựng tay, và tất cả đều kiểm chứng được.</p>
+</header>
+
+<section>
+  <h2>Vào một thứ, ra một kho</h2>
+  <p class="sub">Đây là điểm cốt lõi: đầu vào là thứ ai cũng có, đầu ra là thứ thường
+  phải mua thiết bị hoặc thuê người dựng.</p>
+
+  <div class="io">
+    <div class="io-box">
+      <span class="pill">ĐẦU VÀO</span>
+      <h3>Một video quay tay</h3>
+      <ul>
+        <li>852 khung hình</li>
+        <li>Camera điện thoại</li>
+        <li>Không cảm biến độ sâu</li>
+        <li>Không đánh dấu, không hiệu chuẩn</li>
+      </ul>
+    </div>
+    <div class="arrow">→</div>
+    <div class="io-box">
+      <span class="pill">ĐẦU RA</span>
+      <h3>Bảy lớp dữ liệu</h3>
+      <ul>
+        <li>Bản đồ độ sâu từng khung</li>
+        <li>Đám mây điểm 3D</li>
+        <li>Gaussian splat (5,99 M)</li>
+        <li>Mesh có màu (20,6 M tam giác)</li>
+        <li>Mặt nạ ngữ nghĩa 2D</li>
+        <li>Hộp vật thể 3D + nhãn</li>
+        <li>46 vật thể tách rời</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Vì sao tôi theo hướng này</h2>
+  <p class="sub">Nút thắt của sim-to-real không nằm ở thuật toán mà ở số lượng môi trường
+  huấn luyện. Mà môi trường thì đắt — cả tiền thiết bị lẫn công dựng.</p>
+
+  <div class="card">
+    <h3>Chi phí biên của một môi trường mới</h3>
+    <p>Nếu quy trình này đứng vững, thêm một cảnh chỉ tốn <b>một lần đi bộ cầm điện thoại</b>.
+    So với một buổi chụp LiDAR hay một tuần dựng mô hình, đó là khác biệt về bậc độ lớn —
+    và nó đổi câu hỏi từ "ngân sách cho được mấy cảnh" sang "quay được mấy chỗ".</p>
+  </div>
+
+  <div class="card">
+    <h3>Tách được vật thể mới là chỗ khó</h3>
+    <p>Quét ra một lớp vỏ liền thì dễ, nhưng robot không cầm nắm được gì trong đó — chỉ
+    đi lại được. Ở đây <span class="n">46</span> vật là mesh độc lập, có hộp bao, nhãn và
+    lưới va chạm riêng. Đó là ranh giới giữa bài toán navigation và bài toán manipulation.</p>
+  </div>
+
+  <div class="card">
+    <h3>Tái lập được thì mới gọi là kết quả</h3>
+    <p>Tám giai đoạn, một lệnh, không can thiệp tay — kể cả mô hình thị giác-ngôn ngữ cũng
+    chạy nội bộ thay vì gọi API đám mây. Tôi giữ ràng buộc này vì một quy trình phụ thuộc
+    dịch vụ bên ngoài thì không kiểm chứng lại được sau sáu tháng.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Đọc kết quả</h2>
+  <p class="sub">Bốn giai đoạn chính. Mỗi đoạn phim là dữ liệu thật của lần chạy này.</p>
+  <div class="two">
+    <figure>
+      <video src="media/01_dau_vao_video.mp4" controls muted loop playsinline preload="metadata"></video>
+      <figcaption><b>Đầu vào.</b> Video quay tay quanh xưởng. Đây là toàn bộ thứ hệ thống nhận được.</figcaption>
+    </figure>
+    <figure>
+      <video src="media/02_do_sau_da3.mp4" controls muted loop playsinline preload="metadata"></video>
+      <figcaption><b>Độ sâu đơn ảnh.</b> Mỗi khung hình được suy ra khoảng cách tới từng bề mặt — không cảm biến.</figcaption>
+    </figure>
+    <figure>
+      <video src="media/04_mesh_3d.mp4" controls muted loop playsinline preload="metadata"></video>
+      <figcaption><b>Mesh có màu.</b> 20,6 triệu tam giác, màu lấy từ chính ảnh gốc.</figcaption>
+    </figure>
+    <figure>
+      <video src="media/05_cat_ngang_phong.mp4" controls muted loop playsinline preload="metadata"></video>
+      <figcaption><b>Cắt ngang.</b> Bổ đôi để xác nhận hình học bên trong đúng, không rỗng.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <h2>So sánh: trước và sau khi can thiệp</h2>
+  <p class="sub">Mã nguồn gốc chạy được, nhưng cho kết quả sai ở những chỗ không phép đo
+  nào bắt được. Bảng này là phần đóng góp, đo trên cùng một cảnh.</p>
+  <div class="tw">
+  <table>
+    <tr>
+      <th>Hạng mục</th><th>Trước</th><th>Sau</th><th>Ý nghĩa</th>
+    </tr>
+    <tr class="hi">
+      <td><b>Chỉ số chất lượng</b></td>
+      <td class="n">25,08<br><span style="color:var(--dim);font-size:12px">trên ảnh đã học</span></td>
+      <td class="n good">24,17<br><span style="color:var(--dim);font-size:12px">trên 106 ảnh giấu</span></td>
+      <td>Con số cũ không đo khả năng tổng quát hoá. Con số mới thấp hơn nhưng <b>có thật</b>.</td>
+    </tr>
+    <tr>
+      <td>Vật thể được giữ lại</td>
+      <td class="n">52</td>
+      <td class="n good">95</td>
+      <td>43 vật vốn bị loại âm thầm vì một dịch vụ kiểm chứng không tồn tại.</td>
+    </tr>
+    <tr>
+      <td>Mesh</td>
+      <td class="n">15,1 M tam giác<br>1 khối liền</td>
+      <td class="n good">20,6 M tam giác<br>200 khối rời</td>
+      <td>Tham số mặc định xoá mọi vật không dính sàn và bỏ 9,5% dữ liệu độ sâu.</td>
+    </tr>
+    <tr>
+      <td>Khung hình gán nhãn</td>
+      <td class="n">100</td>
+      <td class="n good">919</td>
+      <td>Phủ toàn bộ video thay vì lấy mẫu thưa.</td>
+    </tr>
+    <tr>
+      <td>Nhãn bịa đặt</td>
+      <td class="n">"cây" ở 91% khung</td>
+      <td class="n good">12%, và có thật</td>
+      <td>Sau khi sửa, kiểm chứng lại: cây nhìn thấy qua cửa sổ.</td>
+    </tr>
+    <tr>
+      <td>Kiểm định tự động</td>
+      <td class="n">chưa có</td>
+      <td class="n good">5/5 đạt</td>
+      <td>Chạy sau mỗi lần dựng, và nó từng báo trượt — đúng.</td>
+    </tr>
+  </table>
+  </div>
+</section>
+
+<section>
+  <h2>Bốn lỗi im lặng</h2>
+  <p class="sub">Loại lỗi khó nhất không phải lỗi làm chương trình dừng — mà loại vẫn chạy
+  trơn tru và trả về con số trông hợp lý. Cả bốn mục dưới đây đều thuộc loại đó, và mỗi mục
+  chỉ lộ ra khi tôi dựng thêm một phép đo mà quy trình gốc không có.</p>
+
+  <div class="card">
+    <h3>Chỉ số chất lượng đo trên chính đề bài</h3>
+    <p>Điều làm tôi nghi ngờ: cấu hình lưu cùng mô hình ghi <span class="n">eval=False</span>,
+    nghĩa là tập kiểm thử đã bị trộn vào tập huấn luyện. Con số 25,08 khi đó chỉ nói mô hình
+    <i>thuộc bài</i> đến đâu, không nói nó <i>tổng quát hoá</i> được gì.</p>
+    <p>Tôi huấn luyện lại, giữ riêng <span class="n">106</span> ảnh mà mô hình không hề thấy
+    trong suốt <span class="n">4 giờ 17 phút</span>. Điểm thật: <span class="n">24,17</span> —
+    thấp hơn, nhưng là con số dùng được.</p>
+    <p>Thu hoạch ngoài dự tính: có tập giữ riêng thì mới đọc được đường cong hội tụ. Sau
+    <span class="n">70.000</span> vòng, chất lượng chỉ nhích <span class="n">+0,12</span>
+    mỗi 10.000 vòng. Cắt ở mốc đó tiết kiệm <b>1 giờ 20 phút GPU mỗi lần chạy</b> mà mất chưa
+    tới 0,3 điểm — thông tin mà lần chạy cũ về nguyên tắc không thể cho biết.</p>
+  </div>
+
+  <div class="card">
+    <h3>Một nửa vật thể bị loại mà không ai biết</h3>
+    <p>Đọc mã bước dựng hộp 3D, tôi thấy nó phân ba ngưỡng: nhận thẳng nếu độ tin cậy ≥ 0,9,
+    loại nếu < 0,75, và <b>hỏi lại một mô hình thị giác-ngôn ngữ</b> cho khoảng giữa. Nhưng
+    lệnh gọi đó trỏ tới một máy chủ không tồn tại trên máy chạy. Yêu cầu thất bại, hàm trả về
+    "không đạt", và mọi vật trong khoảng giữa biến mất — không lỗi, không cảnh báo, không dòng log.</p>
+    <p>Đo phân bố điểm tin cậy mới thấy quy mô: khoảng 0,75–0,90 chứa <span class="n">530</span>
+    trên tổng 1.507 mặt nạ. Tôi dựng một dịch vụ tương thích chạy nội bộ bằng chính mô hình đã
+    tải sẵn trên máy. <span class="n">43</span> vật thể được khôi phục sau khi gom cụm 3D.</p>
+  </div>
+
+  <div class="card">
+    <h3>Mô hình ngôn ngữ tự bịa ra vật không tồn tại</h3>
+    <p>Khi xử lý cả 852 khung hình, danh sách nhãn tích luỹ dần và mô hình bắt đầu coi nó là
+    danh sách phải tìm cho đủ: <span class="n">cây</span> xuất hiện ở <span class="n">91%</span>
+    khung hình, <span class="n">máy cưa vòng</span> ở <span class="n">77%</span> — trong một
+    xưởng kín không có.</p>
+    <p>Cách tôi phân biệt bịa với thật: một vật có thật không thể xuất hiện ở ba phần tư số
+    khung của một lượt đi bộ. Vẽ biểu đồ "nhãn xuất hiện lần đầu ở khung nào, sau đó bám dai
+    bao lâu" thì chữ ký hiện rõ — <span class="n">cây</span> vào từ khung 426 rồi bám 91% mọi
+    khung sau đó.</p>
+    <p>Tôi giới hạn cửa sổ nhãn gợi ý và viết lại lời nhắc. Sau khi sửa, <span class="n">cây</span>
+    còn <span class="n">12%</span>. Nhưng thay vì mừng, tôi hỏi lại mô hình về đúng hai khung đó —
+    nó trả lời <i>"ảnh chụp trong nhà; qua cửa sổ thấy cây, xe đỗ và trời mây"</i>. Lần này
+    <b>đúng là có thật</b>, và tôi giữ nguyên.</p>
+  </div>
+
+  <div class="card">
+    <h3>Ba giai đoạn thiếu hẳn khỏi quy trình</h3>
+    <p>Bước dựng mesh nhận tham số suy từ chính cảnh — nhưng chỉ trên giấy: mã điều phối
+    truyền tham số cho bước huấn luyện và quên bước mesh, nên nó lặng lẽ dùng hằng số mặc định.
+    Đó là hằng số hiệu chỉnh cho phòng ngủ ScanNet++, và cảnh này là một xưởng cơ khí.</p>
+    <p>Hai hệ quả đo được: giới hạn độ sâu 4,0 <b>xoá 9,5% dữ liệu đáng tin</b> của cảnh này,
+    và tham số giữ-một-thành-phần <b>xoá mọi vật đứng rời không dính sàn</b> — đúng những vật
+    mà bài toán thao tác cần. Tôi cũng phát hiện quy trình thiếu hẳn bước dựng hộp 3D và bước
+    tách vỏ phòng: bước sau đó đòi dữ liệu mà không bước nào sinh ra.</p>
+    <p>Sau khi nối đủ: mesh từ 15,1 lên <span class="n">20,6 triệu</span> tam giác,
+    <span class="n">199</span> vật thể độc lập được giữ thay vì gộp thành một khối duy nhất.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Kiểm định tự động</h2>
+  <p class="sub">Năm phép thử chạy sau mỗi lần dựng, không phải kiểm tra thủ công.
+  Điểm quan trọng: trước khi sửa, bộ này <b>báo trượt</b> — và nó trượt đúng chỗ.</p>
+  <div class="tw">
+  <table>
+    <tr><th>Phép thử</th><th>Kiểm tra</th><th>Kết quả</th></tr>
+    <tr><td>Cấu trúc dữ liệu</td><td>Đủ trường, đúng định dạng</td><td class="good">Đạt</td></tr>
+    <tr><td>Không có số liệu đặt sẵn</td><td>Mọi kích thước đều đo từ dữ liệu</td><td class="good">Đạt</td></tr>
+    <tr><td>Chiều cao trần hợp lý</td><td class="n">3,00</td><td class="good">Đạt</td></tr>
+    <tr><td>Vật không lớn hơn phòng</td><td class="n">209 đơn vị³</td><td class="good">Đạt</td></tr>
+    <tr><td>Vật nằm trong phòng</td><td class="n">0/89 lọt ra ngoài</td><td class="good">Đạt</td></tr>
+  </table>
+  </div>
+</section>
+
+<section>
+  <h2>Kiểm chứng trực tiếp</h2>
+  <p class="sub">Mở trong trình duyệt: kéo chuột để nhấc và di chuyển vật thể, thanh trượt
+  chỉnh trọng lực, khối lượng, độ nảy. Không cần cài gì.</p>
+  <a class="cta" href="viewer/index.html">Mở mô hình tương tác →</a>
+</section>
+
+<section>
+  <h2>Giới hạn hiện tại</h2>
+  <p class="sub">Nêu rõ để không ai dùng sai. Cả hai đều có đường xử lý đã xác định.</p>
+
+  <div class="card warn">
+    <h3>Tỉ lệ chưa hiệu chuẩn tuyệt đối</h3>
+    <p>Kích thước rơi rất gần mét (phòng 8,7 × 7,9 × 3,0; ống 3,07; bàn 0,60) và <b>tỉ lệ tương
+    đối giữa các vật là chính xác</b> — nhưng chưa có phép đo thật nào xác nhận. Tôi thử suy hệ số
+    quy đổi từ kích thước chuẩn của cửa, thang, xô: các ước lượng <b>không hội tụ</b>, nên tôi không
+    dán một con số vào cho có.</p>
+    <p>Đủ dùng cho mô phỏng tương đối và bài toán thao tác; chưa dùng làm số đo kỹ thuật.
+    <b>Hướng xử lý:</b> một kích thước thật đã biết trong cảnh là khoá được tỉ lệ toàn bộ.</p>
+  </div>
+
+  <div class="card warn">
+    <h3>Vùng khuất không có dữ liệu</h3>
+    <p>Camera không nhìn được mặt sau máy móc, nên mesh có <span class="n">334</span> vùng khuyết
+    rộng hơn 30 cm. Tôi kiểm lại trên mesh gốc trước khi cắt bất cứ thứ gì: chúng <b>có sẵn từ
+    bản quét</b>, không phải do xử lý sinh ra.</p>
+    <p>Tôi đã thử lấp bằng cách nối viền vào tâm và <b>bỏ hướng đó</b>: với lỗ rộng vài mét nó
+    tạo ra những tấm phẳng cắt ngang phòng — trông liền lạc nhưng là hình học bịa. Thà để lộ
+    chỗ thiếu còn hơn giao một bề mặt sai mà người dùng không biết.</p>
+    <p><b>Hướng xử lý:</b> mô hình sinh hình học cho mặt khuất (giai đoạn kế tiếp đã lên kế hoạch).</p>
+  </div>
+</section>
+
+<section>
+  <h2>Kỹ thuật, gọn</h2>
+  <div class="tw">
+  <table>
+    <tr><th>Giai đoạn</th><th>Phương pháp</th><th>Ra</th></tr>
+    <tr><td>Độ sâu</td><td>Depth-Anything-3, suy độ sâu đơn ảnh</td><td class="n">852 bản đồ</td></tr>
+    <tr><td>Ngoại quan</td><td>Planar 3D Gaussian Splatting, 98k vòng</td><td class="n">5,99 M điểm</td></tr>
+    <tr><td>Hình học</td><td>TSDF fusion, tham số suy từ cảnh</td><td class="n">20,6 M tam giác</td></tr>
+    <tr><td>Ngữ nghĩa</td><td>Qwen3-VL-8B chạy nội bộ</td><td class="n">90 lớp</td></tr>
+    <tr><td>Phân vùng</td><td>SAM3 theo lời nhắc văn bản</td><td class="n">852 khung</td></tr>
+    <tr><td>Hộp 3D</td><td>Nâng mặt nạ 2D lên 3D, VLM kiểm chứng</td><td class="n">95 vật</td></tr>
+    <tr><td>Tách vật</td><td>RANSAC tìm mặt phẳng vỏ phòng</td><td class="n">46 mesh rời</td></tr>
+  </table>
+  </div>
+  <p class="sub" style="margin-top:20px">Chạy trên một GPU, không kết nối mạng, 4 giờ 17 phút
+  cho toàn bộ. Trọng số và dữ liệu đầy đủ (3,93 GB) đã lưu trữ, tái sử dụng được.</p>
+</section>
+
+<section>
+  <h2>Việc tiếp theo</h2>
+  <p class="sub">Xếp theo thứ tự tôi cho là đáng làm trước, kèm lý do.</p>
+  <div class="tw">
+  <table>
+    <tr><th>Việc</th><th>Vì sao</th><th>Ước tính</th></tr>
+    <tr>
+      <td><b>Khoá tỉ lệ mét</b></td>
+      <td>Chặn đường tới mô phỏng vật lý thật. Cần một mốc đo trong cảnh, hoặc suy từ chiều cao camera.</td>
+      <td class="n">1–2 ngày</td>
+    </tr>
+    <tr>
+      <td><b>Sinh mặt khuất</b></td>
+      <td>Lấp 334 vùng thiếu bằng mô hình sinh hình học thay vì nội suy — mở đường cho nhấc vật ra khỏi cảnh.</td>
+      <td class="n">1 tuần</td>
+    </tr>
+    <tr>
+      <td><b>Chạy trên cảnh thứ hai</b></td>
+      <td>Phép thử thật của tính khái quát. Mọi tham số đã suy từ cảnh nên về nguyên tắc chạy được, nhưng chưa kiểm chứng.</td>
+      <td class="n">1 ngày</td>
+    </tr>
+    <tr>
+      <td><b>Xuất MJCF cho MuJoCo</b></td>
+      <td>Biến scene thành môi trường robot chạy được. Phụ thuộc mục tỉ lệ ở trên.</td>
+      <td class="n">2–3 ngày</td>
+    </tr>
+  </table>
+  </div>
+</section>
+
+<footer class="wrap">
+  Cảnh <span class="m">scannetpp_00777c41d4</span> · 852 khung hình · RTX PRO 6000 ·
+  toàn bộ số liệu trong trang này đo trên chính lần chạy này, không phải ước lượng.
+</footer>
+</div>
