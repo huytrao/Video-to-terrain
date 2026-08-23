@@ -639,11 +639,56 @@ def selftest() -> dict:
             f"framing is off-centre: x [{x0:.4f}, {x1:.4f}], y [{y0:.4f}, {y1:.4f}]"
         )
 
+    # The section's drawn geometry and its framing points must be the same set.
+    # When they were not, the camera was fitted to a percentile-clipped subset
+    # while every kept triangle was rendered, so the subject overflowed the frame
+    # it had been fitted to and three delivered stills were cropped at the border.
+    # A fit that is exact on the analytic room above cannot detect that: the
+    # arithmetic was right and the input was wrong.
+    #
+    # Two cases, because the guard has two branches and a test that only takes one
+    # of them proves half the function. A grid plus one far spike: the clip should
+    # engage and the spike should leave the drawn set. A bare grid whose extremes
+    # are dense walls: the clip would cut real surface, so it must be abandoned
+    # and *everything* must stay drawn.
+    gx, gy = np.meshgrid(np.linspace(-3, 3, 12), np.linspace(-3, 3, 12))
+    grid = np.column_stack([gx.ravel(), gy.ravel(), np.zeros(gx.size)])
+    quads = [[r * 12 + c, r * 12 + c + 1, (r + 1) * 12 + c] for r in range(11) for c in range(11)]
+    clip_report = {}
+    for case, extra in (("with_spike", np.array([[40.0, 40.0, 40.0]])), ("dense_only", None)):
+        v = grid if extra is None else np.vstack([grid, extra])
+        t = np.array(quads if extra is None
+                     else quads + [[len(grid), 0, 1]], dtype=int)
+        keep = np.ones(len(t), dtype=bool)
+        draw, framed = _section_and_clip(v, t, keep, pct=0.5)
+
+        drawn_pts = v[np.unique(t[draw])]
+        if framed.shape != drawn_pts.shape or not np.array_equal(
+                np.sort(framed, axis=0), np.sort(drawn_pts, axis=0)):
+            raise AssertionError(
+                f"{case}: framing set is not the drawn set — "
+                f"{len(framed)} framed vs {len(drawn_pts)} drawn"
+            )
+        reach = float(np.abs(drawn_pts).max())
+        clip_report[case] = {"triangles": int(draw.sum()), "reach_m": round(reach, 2)}
+
+    if clip_report["with_spike"]["reach_m"] > 10.0:
+        raise AssertionError(
+            "the clip did not remove an isolated spike 40 m out: "
+            f"drawn geometry still reaches {clip_report['with_spike']['reach_m']} m"
+        )
+    if clip_report["dense_only"]["triangles"] != len(quads):
+        raise AssertionError(
+            "the clip ate real surface on a mesh with no outliers: kept "
+            f"{clip_report['dense_only']['triangles']} of {len(quads)} triangles"
+        )
+
     return {
         "detect_up_sign": [up, down],
         "kept_fraction_per_azimuth": fractions,
         "frame_span_fraction": [round(sw, 4), round(sh, 4)],
         "fit_distance_m": round(d2, 3),
+        "section_clip": clip_report,
     }
 
 
@@ -1202,23 +1247,65 @@ def _frame_content(
     return best[0], best[1]
 
 
-def _percentile_clip(points: np.ndarray, pct: float) -> np.ndarray:
-    """Drop per-axis outliers so framing is not driven by fusion spikes.
+def _section_and_clip(
+    verts: np.ndarray,
+    tris: np.ndarray,
+    keep: np.ndarray,
+    pct: float,
+    max_clipped_fraction: float = 0.05,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Triangles to draw, and the points to frame on — the same set, by construction.
 
-    TSDF output has isolated vertices standing metres outside the walls;
-    ``_prepare_cutaway`` already takes percentiles rather than min/max for the
-    same reason. Framing on a spike would push the camera back and undo the fit.
+    The bug this exists to close: the section was drawn from every kept triangle
+    while the camera was fitted to a ``_percentile_clip`` *subset* of those
+    vertices. Whatever the clip discarded was still rendered, so the subject
+    overflowed the frame it had been fitted to — measured at 0.973–0.978 of the
+    width against a 1/1.06 = 0.943 target, with ``touches_edge`` true on three of
+    the delivered ``cutaway_nobox`` stills. The framing arithmetic was never
+    wrong; it was being asked about different geometry than the renderer drew.
 
-    Applied to mesh vertices only. Box corners are annotations rather than noisy
-    reconstruction output, and clipping one would put it off the edge of the frame
-    — which is bug B4.
+    So framing points are *derived from* the returned triangle mask rather than
+    computed alongside it. Every return path below goes through the same final
+    expression, which is what makes "drawn == framed" hold rather than be
+    something a future edit has to remember.
+
+    Clipping now removes triangles as well, and that has a failure mode the
+    framing-only version did not: a percentile is a rank, not a distance, and a
+    room's extreme coordinate is a *wall* carrying thousands of near-coplanar
+    vertices. Cutting at the 0.5th percentile there can slice a visible slab off
+    the wall instead of trimming isolated TSDF spikes. When the clip would drop
+    more than ``max_clipped_fraction`` of the section, it is abandoned for this
+    frame: the fit then contains every drawn vertex, spikes included, which
+    frames wider than ideal but still crops nothing. A loose frame is a cosmetic
+    problem; a cropped one is the bug.
+
+    What the clip is for, when it does apply: TSDF fusion leaves isolated
+    vertices standing metres outside the walls, and framing on one pushes the
+    camera back and undoes the fit. ``_prepare_cutaway`` takes percentiles rather
+    than min/max for the same reason.
+
+    Mesh vertices only. Box corners are annotations, not noisy reconstruction
+    output, and they are unioned in by the caller *after* this returns —
+    deliberately outside the clip, because clipping a box corner is what put one
+    off the edge of the frame in bug B4.
     """
-    if pct <= 0.0 or not len(points):
-        return points
-    lo = np.percentile(points, pct, axis=0)
-    hi = np.percentile(points, 100.0 - pct, axis=0)
-    inside = np.all((points >= lo) & (points <= hi), axis=1)
-    return points[inside] if inside.any() else points
+    if not keep.any():
+        return keep, verts[:0]
+
+    tri_keep = keep
+    used = np.unique(tris[keep])
+    pts = verts[used]
+    if pct > 0.0 and len(pts):
+        lo = np.percentile(pts, pct, axis=0)
+        hi = np.percentile(pts, 100.0 - pct, axis=0)
+        inside = np.zeros(len(verts), dtype=bool)
+        inside[used] = np.all((pts >= lo) & (pts <= hi), axis=1)
+        clipped = keep & inside[tris].all(axis=1)
+        dropped = 1.0 - clipped.sum() / keep.sum()
+        if clipped.any() and dropped <= max_clipped_fraction:
+            tri_keep = clipped
+
+    return tri_keep, verts[np.unique(tris[tri_keep])]
 
 
 def _cutaway_eye(
@@ -1387,11 +1474,9 @@ def cutaway_turntable(
                 continue
 
             r.scene.remove_geometry("mesh")
-            r.scene.add_geometry("mesh", _sectioned_mesh(scene.mesh, keep), mat)
-            content = np.vstack([
-                _percentile_clip(verts[np.unique(tris[keep])], content_percentile),
-                *visible_corners,
-            ])
+            draw, framed = _section_and_clip(verts, tris, keep, content_percentile)
+            r.scene.add_geometry("mesh", _sectioned_mesh(scene.mesh, draw), mat)
+            content = np.vstack([framed, *visible_corners])
             target, eye = _cutaway_eye(scene, az, elevation_deg, content, aspect, fov_deg, margin)
             eye_distances.append(float(np.linalg.norm(eye - target)))
             r.scene.camera.look_at(target.tolist(), eye.tolist(), [0, 0, scene.up_sign])
@@ -1497,11 +1582,9 @@ def cutaway_views(
                 visible_corners.append(corners)
 
         r.scene.remove_geometry("mesh")
-        r.scene.add_geometry("mesh", _sectioned_mesh(scene.mesh, keep), mat)
-        content = np.vstack([
-            _percentile_clip(verts[np.unique(tris[keep])], content_percentile),
-            *visible_corners,
-        ])
+        draw, framed = _section_and_clip(verts, tris, keep, content_percentile)
+        r.scene.add_geometry("mesh", _sectioned_mesh(scene.mesh, draw), mat)
+        content = np.vstack([framed, *visible_corners])
         target, eye = _cutaway_eye(scene, az, elevation_deg, content, aspect, fov_deg, margin)
         r.scene.camera.look_at(target.tolist(), eye.tolist(), [0, 0, scene.up_sign])
 

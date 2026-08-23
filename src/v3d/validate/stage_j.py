@@ -35,7 +35,7 @@ MATCH_RADIUS_M = 1.0
 
 # An object centre may legitimately sit outside the floor polygon: a window's box
 # lies in the wall, and the polygon is a rectangle fitted to a shell that does not
-# agree with the other four (see docs-for-agents/bugs-found.md B1). Measured on the
+# agree with the other four (see docs/reference/bugs-found.md B1). Measured on the
 # released annotation for 00777c41d4, 75 of 218 *correct* object centres fall
 # outside, the worst by 0.82 m — so a check demanding containment fails on ground
 # truth and could never pass on a reconstruction. What is still worth catching is an

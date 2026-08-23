@@ -39,12 +39,18 @@ PROMPT_TEMPLATE = (
     "- Do NOT use non-informative words like 'object', 'thing', 'stuff', 'unknown'.\n\n"
     "Consistency with previous frames (canonical vocabulary):\n"
     "- Existing labels from previous frames: {previous}\n"
-    "- If any object in the current image matches a previous label in meaning (including synonyms, singular/plural, or minor wording differences), "
-    "you MUST reuse the previous label exactly and MUST NOT introduce a new synonym.\n"
-    "- Only create a new label if no existing label can reasonably cover the same object meaning.\n\n"
+    "- This list is a SPELLING GUIDE, not a checklist. It tells you what to CALL a thing, "
+    "never what to expect. Most of these labels are NOT in the current image.\n"
+    "- If an object IS visible and matches a previous label in meaning (including synonyms, "
+    "singular/plural, or minor wording differences), reuse that previous label exactly rather "
+    "than inventing a new synonym.\n"
+    "- Only create a new label if no existing label can reasonably cover the same object meaning.\n"
+    "- NEVER list a label just because it appears above. Judge each one only against what you "
+    "can actually SEE in THIS image right now. Listing something that is not visible is an error.\n\n"
     "Output format:\n"
     "- Return a single line of lowercase, comma-separated class names only.\n"
-    "- Include classes that appeared in previous frames if they also appear here.\n"
+    "- List ONLY what is visible in this image. A short, honest list is correct; a long list "
+    "padded from the vocabulary above is wrong.\n"
     "- No explanations, no extra text."
 )
 
@@ -211,6 +217,7 @@ class VLMLabeler:
         self,
         image_paths: Iterable[str | Path],
         merge_specialisations: bool = True,
+        prompt_vocabulary: int = 24,
     ) -> tuple[list[FrameLabels], list[str], dict[str, str]]:
         """Label frames in order, carrying the vocabulary forward as the paper does.
 
@@ -220,16 +227,32 @@ class VLMLabeler:
         remaining frame. Folding it away immediately stops the cascade at the
         frame it starts on.
 
+        `prompt_vocabulary` bounds how much of that vocabulary is shown, and it
+        exists because the unbounded version measurably fails. Over 852 frames
+        the list reached 70 labels and the model began treating it as a
+        checklist rather than a spelling guide: `tree` first appeared at frame
+        426 and then in **91%** of every later frame, `bandsaw`, `lathe`, `saw`
+        and `nail gun` all entered together at frame 270 and held 75-77%, in an
+        indoor workshop where none of them is present. A real object does not
+        appear in three quarters of a walkthrough; a suggested one does. The
+        100-frame run, whose list never grew past 32, showed none of this.
+
+        Showing the most recently *seen* labels rather than all of them keeps
+        the naming-consistency benefit — the reason the list is passed at all —
+        while denying the cascade its fuel, because a label has to keep being
+        independently re-observed to stay in the prompt.
+
         Returns the per-frame labels, the vocabulary, and every merge made so
         the decision is auditable rather than silent.
         """
         vocabulary: list[str] = []
         results: list[FrameLabels] = []
         merges: dict[str, str] = {}
+        recent: list[str] = []          # most-recently-seen first
 
         for path in image_paths:
             img = Image.open(path).convert("RGB")
-            res = self.label_frame(img, vocabulary)
+            res = self.label_frame(img, recent[:prompt_vocabulary])
             res.image = str(path)
 
             kept: list[str] = []
@@ -246,6 +269,15 @@ class VLMLabeler:
                     vocabulary.append(final)
             res.labels = kept
             results.append(res)
+
+            # Move what this frame actually saw to the front, so the prompt
+            # window follows the camera. A label the walk has left behind falls
+            # out of the window and stops being suggested; if it is genuinely
+            # still there, the next frame re-observes it and it returns.
+            for label in reversed(kept):
+                if label in recent:
+                    recent.remove(label)
+                recent.insert(0, label)
 
         if merge_specialisations:
             vocabulary, extra = consolidate_final(results, vocabulary)

@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+.backup/
 # holds a plaintext Kaggle API key
 kaggle_upload_example.py
 **/kaggle.json
@@ -26,6 +27,7 @@ env/
 
 # Pipeline outputs (heavy artifacts)
 outputs/
+outputs-*/
 *.ply
 *.npy
 # keep scene_mesh/point_cloud only if under tracked samples/
@@ -36,8 +38,22 @@ outputs/
 # Node
 node_modules/
 
-# Logs
+# Logs. MuJoCo writes MUJOCO_LOG.TXT next to wherever it is invoked, and the
+# capitalised .TXT means *.log does not catch it.
 *.log
+MUJOCO_LOG.TXT
+
+# Input scans and benchmark deliverables: hundreds of MB to several GB of media
+# that is produced or downloaded, not authored. input/ keeps its README and
+# download script so a fresh clone knows how to refill it.
+input/*
+!input/README_DOWNLOAD.md
+!input/download.sh
+
+# Build artefacts from `pip install -e .`
+build/
+dist/
+*.egg-info/
 
 # depth-anything-3 vendored repo: only ship the installable package
 # (src/, pyproject.toml, requirements.txt) - these are gradio demo /
@@ -63,3 +79,15 @@ kaggle-runtime-toolkit-agent-skills/
 # source-reference/ holds the paper checkouts (holi-spatial, Depth-Anything-3) and
 # the 15 MB PDF: ~116 MB of upstream code that is fetched, not authored here.
 source-reference/
+
+# Collected visual output — regenerate with `make visualize`
+/visualize/
+
+# Delivered artefacts: 127 MB of GLB and video, regenerated from the pipeline and
+# mirrored to Kaggle. The report's own page is tracked so the writeup survives;
+# the media it points at is not.
+/output/*
+!/output/REPORT/
+/output/REPORT/*
+!/output/REPORT/index.html
+!/output/REPORT/carve_manifest.json

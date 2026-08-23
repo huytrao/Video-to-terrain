@@ -146,12 +146,111 @@ def build_room(boxes: list[GTBox]) -> Room:
     )
 
 
+def room_from_mesh(objects_json: str | Path) -> Room:
+    """Build the room shell from the mesh-derived shell planes, not from lifted boxes.
+
+    Why this exists. `build_room` takes the floor polygon from whatever the
+    semantic pipeline lifted as `floor` instances. On the factory scene that produced
+    a polygon spanning 5.90 x 1.43 while the fused mesh's floor plane held 3.8 M
+    points across **96.3%** of the footprint — the lifted floor captured a walkable
+    strip, not the floor. Stage J then reported two thirds of the objects as "stray"
+    and two machines as "larger than the room", both artefacts of an undersized
+    footprint rather than errors in the boxes.
+
+    `v3d.scene.decompose` finds the shell by RANSAC over the mesh itself, requires a
+    shell plane to sit at the scene's boundary, and its audit passes. Its floor extent
+    is therefore the better witness, and this reads it.
+
+    The polygon is still a rectangle, which is a real approximation for an L-shaped
+    room — recorded as `source="derived"` so a reader can tell it from a
+    measured polygon.
+    """
+    import json as _json
+
+    doc = _json.loads(Path(objects_json).read_text())
+    up_axis = np.asarray(doc["up_axis"], dtype=float)
+    up = int(np.argmax(np.abs(up_axis)))
+    horiz = [i for i in range(3) if i != up]
+
+    planes = doc.get("shell_planes", [])
+    floors = [q for q in planes if q["role"] == "floor"]
+    ceils = [q for q in planes if q["role"] == "ceiling"]
+    if not floors:
+        raise ValueError(
+            f"{objects_json} has no floor among its shell planes "
+            f"({[q['role'] for q in planes]}); the mesh shell cannot supply a room"
+        )
+
+    # Position, not just size. Building the polygon from `room_extent` alone forces
+    # the assumption that the scene is centred on the origin; it is not, and that
+    # error displaced the whole footprint and made eleven objects read as strays.
+    if doc.get("room_aabb_min") and doc.get("room_aabb_max"):
+        lo = np.asarray(doc["room_aabb_min"], dtype=float)
+        hi = np.asarray(doc["room_aabb_max"], dtype=float)
+    else:
+        raise ValueError(
+            f"{objects_json} predates room_aabb_min/max. Re-run the object cut: a "
+            f"floor polygon cannot be positioned from an extent alone, and guessing "
+            f"the origin is what this field exists to prevent."
+        )
+    a, b = horiz
+    polygon = [[float(lo[a]), float(lo[b])], [float(hi[a]), float(lo[b])],
+               [float(hi[a]), float(hi[b])], [float(lo[a]), float(hi[b])]]
+    half = [float(hi[a] - lo[a]) / 2.0, float(hi[b] - lo[b]) / 2.0]
+
+    floor_off = float(doc["floor_offset"])
+    normal = [0.0, 0.0, 0.0]
+    normal[up] = 1.0
+
+    if ceils:
+        height = float(doc["up_axis_evidence"]["room_height_estimate"])
+        ceiling_source = "derived"
+        ceiling_plane = Plane(coeffs=[*normal, -(floor_off + height)],
+                              source="derived")
+    else:
+        height = FALLBACK_CEILING_M
+        ceiling_source = "assumed"
+        ceiling_plane = None
+
+    walls = []
+    for q in planes:
+        if q["role"] != "wall":
+            continue
+        walls.append(Wall(
+            plane=Plane(coeffs=[*(float(v) for v in q["normal"]), float(q["offset"])],
+                        source="derived",
+                        inlier_count=int(q.get("points", 0))),
+            footprint_xy=[[float(lo[a]), float(lo[b])],
+                          [float(hi[a]), float(hi[b])]],
+            z_range_m=[floor_off, floor_off + height],
+            source="derived",
+        ))
+
+    return Room(
+        floor=Floor(
+            plane=Plane(coeffs=[*normal, -floor_off], source="derived",
+                        inlier_count=int(floors[0].get("points", 0))),
+            polygon_xy=polygon,
+            source="derived",
+        ),
+        ceiling=Ceiling(height_m=height, plane=ceiling_plane, source=ceiling_source),
+        walls=walls,
+    )
+
+
 def build_scene(
     scene_id: str,
     instances_path: str | Path,
     pipeline: str = "holi-spatial",
     assets: dict[str, str] | None = None,
+    objects_json: str | Path | None = None,
 ) -> SceneDocument:
+    """Convert lifted instances into the scene document.
+
+    `objects_json` is `decompose`'s output. When given, the room shell comes from the
+    mesh rather than from lifted floor/wall instances — see `room_from_mesh` for the
+    measurement that motivates it.
+    """
     boxes = load_gt(instances_path)
 
     objects = [
@@ -169,10 +268,18 @@ def build_scene(
         if not b.is_shell
     ]
 
+    room = build_room(boxes)
+    room_source = "lifted_instances"
+    if objects_json is not None:
+        room = room_from_mesh(objects_json)
+        room_source = "mesh_shell"
+
     return SceneDocument(
         scene_id=scene_id,
-        room=build_room(boxes),
+        room=room,
         objects=objects,
         assets=assets or {},
-        provenance={"pipeline": pipeline, "instances": str(instances_path)},
+        provenance={"pipeline": pipeline, "instances": str(instances_path),
+                    "room_source": room_source,
+                    "objects_json": str(objects_json) if objects_json else None},
     )
