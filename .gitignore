@@ -91,3 +91,6 @@ source-reference/
 /output/REPORT/*
 !/output/REPORT/index.html
 !/output/REPORT/carve_manifest.json
+!/output/REPORT/media/
+/output/REPORT/media/*
+!/output/REPORT/media/fig_*.png

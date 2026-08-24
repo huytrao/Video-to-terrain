@@ -127,6 +127,29 @@ footer{padding:36px 0 70px;color:var(--dim);font-size:13.5px;line-height:1.7}
 </section>
 
 <section>
+  <h2>Căn phòng dựng được</h2>
+  <p class="sub">Ba góc nhìn của cùng một mesh, dựng từ chính lần chạy này. Cửa sổ, máy móc,
+  tủ tường và đèn trần đều đọc được — màu lấy từ ảnh gốc, không tô lại.</p>
+  <figure>
+    <img src="media/fig_room_views.png" alt="Ba góc nhìn của căn phòng đã tái dựng">
+    <figcaption><b>20,6 triệu tam giác</b> từ 852 khung hình. Bên trái và giữa là hai góc đối
+    diện; bên phải nhìn từ trên xuống, thấy được bố cục mặt bằng.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Vật thể tách được</h2>
+  <p class="sub">Phần khó nhất, và cũng là phần tôi nói thẳng về chất lượng: quy trình tách
+  ra <b>46 khối</b>, trong đó <b>28 khối có hình dạng đặc</b> — số còn lại là mảnh vỏ bị bóc
+  khỏi tường, dùng được cho va chạm nhưng không phải đồ vật.</p>
+  <figure>
+    <img src="media/fig_objects.png" alt="Năm vật thể tách rời từ căn phòng">
+    <figcaption>Năm vật nhận ra được bằng mắt, mỗi cái là một mesh độc lập có màu và lưới
+    va chạm riêng. Tên do mô hình thị giác-ngôn ngữ gán, tôi giữ nguyên nhãn nó đưa ra.</figcaption>
+  </figure>
+</section>
+
+<section>
   <h2>Vì sao tôi theo hướng này</h2>
   <p class="sub">Nút thắt của sim-to-real không nằm ở thuật toán mà ở số lượng môi trường
   huấn luyện. Mà môi trường thì đắt — cả tiền thiết bị lẫn công dựng.</p>
@@ -230,6 +253,13 @@ footer{padding:36px 0 70px;color:var(--dim);font-size:13.5px;line-height:1.7}
   <p class="sub">Loại lỗi khó nhất không phải lỗi làm chương trình dừng — mà loại vẫn chạy
   trơn tru và trả về con số trông hợp lý. Cả bốn mục dưới đây đều thuộc loại đó, và mỗi mục
   chỉ lộ ra khi tôi dựng thêm một phép đo mà quy trình gốc không có.</p>
+
+  <figure>
+    <img src="media/fig_findings.png" alt="Hai biểu đồ: đường cong chất lượng và tỉ lệ nhãn bịa">
+    <figcaption><b>Trái:</b> khoảng cách giữa hai đường là phần mô hình học thuộc chứ không
+    tổng quát hoá được — chỉ nhìn thấy khi có tập giữ riêng. <b>Phải:</b> chữ ký của nhãn bịa,
+    và kết quả sau khi sửa.</figcaption>
+  </figure>
 
   <div class="card">
     <h3>Chỉ số chất lượng đo trên chính đề bài</h3>
