@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Factory scene — carved objects with gravity</title>
+<style>
+  :root { color-scheme: dark; --ink:#e8e8ea; --dim:#9a9aa2; --line:#2c2c34; --accent:#7dd3a0; }
+  * { box-sizing: border-box; }
+  html,body { margin:0; height:100%; background:#101014; color:var(--ink);
+              font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; overflow:hidden; }
+  #stage { position:fixed; inset:0; }
+  #panel { position:fixed; top:12px; left:12px; width:288px; background:rgba(18,18,22,.92);
+           border:1px solid var(--line); border-radius:10px; padding:12px 13px; backdrop-filter:blur(8px); }
+  h1 { font-size:13px; margin:0 0 2px; letter-spacing:.02em; }
+  .sub { color:var(--dim); font-size:11px; margin-bottom:10px; }
+  .row { display:flex; justify-content:space-between; gap:8px; padding:2px 0; font-size:11.5px; }
+  .row span:last-child { color:var(--accent); }
+  ul { list-style:none; margin:8px 0 0; padding:0; border-top:1px solid var(--line); }
+  li { padding:5px 6px; margin-top:4px; border:1px solid var(--line); border-radius:6px;
+       cursor:pointer; display:flex; justify-content:space-between; align-items:center; font-size:11.5px; }
+  li:hover { border-color:#4a4a56; }
+  li.on { border-color:var(--accent); background:rgba(125,211,160,.10); }
+  li .st { color:var(--dim); font-size:10px; }
+  li.fall { border-color:#c58b3a; }
+  li.fall .st::after { content:' ↓ rơi'; color:#c58b3a; }
+  button { width:100%; margin-top:10px; padding:7px; background:#1d1d24; color:var(--ink);
+           border:1px solid var(--line); border-radius:7px; cursor:pointer; font:inherit; font-size:11.5px; }
+  button:hover { border-color:#4a4a56; }
+  #hint { position:fixed; bottom:12px; left:12px; color:var(--dim); font-size:11px;
+          background:rgba(18,18,22,.9); border:1px solid var(--line); border-radius:8px; padding:7px 11px; }
+  #panel a#done { display:block; width:100%; margin-top:7px; padding:7px; text-align:center;
+                  background:#1d1d24; color:var(--accent); border:1px solid var(--line);
+                  border-radius:7px; font-size:11.5px; text-decoration:none; }
+  #panel a#done:hover { border-color:var(--accent); }
+  #load { position:fixed; inset:0; display:grid; place-items:center; background:#101014; font-size:12px; color:var(--dim); }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="panel">
+  <h1>Factory scene — 8 vật rời</h1>
+  <div class="sub">Kéo để nhấc · thả để rơi</div>
+  <div class="row"><span>khối lượng / vật</span><span id="m-mass">10.0 kg</span></div>
+  <div class="row"><span>trọng lực</span><span id="m-grav">9.81 m/s²</span></div>
+  <div class="row"><span>mặt sàn</span><span id="m-floor">—</span></div>
+  <div class="row"><span>đang chọn</span><span id="m-sel">—</span></div>
+  <div class="row"><span>cao hơn mặt đỡ</span><span id="m-drop">—</span></div>
+  <div class="row"><span>đang tựa lên</span><span id="m-onto">—</span></div>
+  <div class="row"><span>vận tốc rơi</span><span id="m-vel">—</span></div>
+  <div class="row"><span>động năng chạm</span><span id="m-ke">—</span></div>
+  <ul id="list"></ul>
+  <button id="reset">Đưa tất cả về chỗ cũ</button>
+  <a id="done" href="../objects3d/index.html">3 vật hoàn thiện (Hunyuan3D) →</a>
+</div>
+<div id="hint">chuột trái kéo vật · chuột phải/kéo nền để xoay · lăn để zoom</div>
+<div id="load">đang nạp scene…</div>
+
+<script type="importmap">
+{ "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+    "three-mesh-bvh": "https://unpkg.com/three-mesh-bvh@0.6.8/build/index.module.js"
+} }
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast } from 'three-mesh-bvh';
+
+THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
+THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
+THREE.Mesh.prototype.raycast = acceleratedRaycast;
+
+// The scan's up axis is -Z. Rotating +90 deg about X maps (x,y,z) -> (x,-z,y),
+// which sends that -Z up direction onto three.js's +Y. Every geometry gets this
+// baked in once at load, so all physics below can assume plain Y-up.
+const TO_Y_UP = new THREE.Matrix4().makeRotationX(Math.PI / 2);
+
+const GRAVITY  = 9.81;   // m/s^2
+const MASS     = 10.0;   // kg per object, as specified
+const AIR_RHO  = 1.225;  // kg/m^3
+const DRAG_CD  = 1.05;   // flat-ish body
+const REST_EPS = 0.004;  // m, contact tolerance
+const RAY_LIFT = 0.02;   // m, ray start offset so a foot cannot hit itself
+const STRAY    = 6.0;    // m a body may wander beyond the room before recall
+const LOOKUP   = 0.30;   // m above a foot that a drag-clamp ray starts from
+const BOUNCE   = 0.12;
+
+const el = id => document.getElementById(id);
+const fmt = (v, n = 2) => (v === null || v === undefined || !isFinite(v)) ? '—' : v.toFixed(n);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+el('stage').appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x101014);
+const camera = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, 0.05, 400);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+
+// Scan vertex colours already carry the room's real lighting, so keep the rig
+// close to flat: a strong ambient plus a weak key just to shape a lifted object.
+scene.add(new THREE.AmbientLight(0xffffff, 2.6));
+const key = new THREE.DirectionalLight(0xffffff, 0.9);
+key.position.set(2.5, 6, 3.5);
+scene.add(key);
+
+const loader = new GLTFLoader();
+const load = url => new Promise((ok, no) => loader.load(url, ok, undefined, no));
+
+function firstMesh(gltf) {
+  let found = null;
+  gltf.scene.updateMatrixWorld(true);
+  gltf.scene.traverse(o => { if (!found && o.isMesh) found = o; });
+  if (!found) throw new Error('glb contains no mesh');
+  const geometry = found.geometry.clone();
+  geometry.applyMatrix4(found.matrixWorld);
+  geometry.applyMatrix4(TO_Y_UP);
+  return geometry;
+}
+
+function surfaceMaterial(geometry) {
+  return new THREE.MeshStandardMaterial({
+    vertexColors: geometry.hasAttribute('color'),
+    color: geometry.hasAttribute('color') ? 0xffffff : 0x9a9a9a,
+    roughness: 0.96, metalness: 0.0, side: THREE.DoubleSide,
+  });
+}
+
+/** Sample contact points on the underside of a body, in its local frame. */
+function feetOf(geometry, maxPoints = 56) {
+  const position = geometry.attributes.position;
+  geometry.computeBoundingBox();
+  const baseY = geometry.boundingBox.min.y;   // not the room floor; this body's underside
+  const band = Math.max(0.02, (geometry.boundingBox.max.y - baseY) * 0.06);
+  const low = [];
+  for (let i = 0; i < position.count; i++) {
+    const y = position.getY(i);
+    if (y <= baseY + band) low.push(new THREE.Vector3(position.getX(i), y, position.getZ(i)));
+  }
+  if (low.length === 0) low.push(new THREE.Vector3(0, baseY, 0));
+  const step = Math.max(1, Math.ceil(low.length / maxPoints));
+  return low.filter((_, i) => i % step === 0);
+}
+
+const raycaster = new THREE.Raycaster();
+raycaster.firstHitOnly = true;
+const DOWN = new THREE.Vector3(0, -1, 0);
+
+/** What a body would land on, and how far below it that is.
+
+Support comes from three places: the room shell, every OTHER body, and the
+floor plane extended without bound.  The floor plane is what stops a body
+dragged out through a wall from falling forever -- the room mesh simply has no
+triangle out there to hit.
+*/
+function supportBelow(body) {
+  let distance = Infinity;
+  let onto = null;
+  const origin = new THREE.Vector3();
+  const targets = [room, ...bodies.filter(b => b !== body).map(b => b.mesh)];
+
+  for (const foot of body.feet) {
+    origin.copy(foot).applyMatrix4(body.mesh.matrixWorld);
+    origin.y += RAY_LIFT;
+    raycaster.set(origin, DOWN);
+    raycaster.far = 200;
+    const hit = raycaster.intersectObjects(targets, false)[0];
+    if (hit && hit.distance - RAY_LIFT < distance) {
+      distance = hit.distance - RAY_LIFT;
+      onto = hit.object === room ? 'sàn/phòng' : (bodies.find(b => b.mesh === hit.object) || {}).label;
+    }
+    const toFloor = (origin.y - RAY_LIFT) - floorY;
+    if (toFloor < distance) { distance = toFloor; onto = 'mặt sàn kéo dài'; }
+  }
+  return { distance, onto };
+}
+
+/** How far a held body must rise so no foot sits under its own support.
+
+`supportBelow` cannot answer this: its rays start at the feet and point down,
+so once a body has been shoved under the bench the bench is behind the ray and
+never gets hit. These rays start `LOOKUP` above each foot instead, which is
+what makes a surface the body has already sunk into visible at all.
+*/
+function liftOutOfFloor(body) {
+  let lift = 0;
+  const origin = new THREE.Vector3();
+  const targets = [room, ...bodies.filter(b => b !== body).map(b => b.mesh)];
+  for (const foot of body.feet) {
+    origin.copy(foot).applyMatrix4(body.mesh.matrixWorld);
+    const footY = origin.y;
+    let surfaceY = floorY;                 // the floor plane holds everywhere
+    origin.y = footY + LOOKUP;
+    raycaster.set(origin, DOWN);
+    raycaster.far = LOOKUP + 200;
+    const hit = raycaster.intersectObjects(targets, false)[0];
+    if (hit) surfaceY = Math.max(surfaceY, origin.y - hit.distance);
+    lift = Math.max(lift, surfaceY - footY);
+  }
+  return lift;
+}
+
+const bodies = [];
+let selected = null, room = null, floorY = 0, roomBox = null;
+
+(async function boot() {
+  const manifest = await (await fetch('../scene_old/carve_manifest.json')).json();
+  // TO_Y_UP sends scan (x,y,z) to (x,-z,y), so the floor's scan z becomes -z here.
+  floorY = -manifest.floor_z;
+  el('m-floor').textContent = `y = ${floorY.toFixed(3)} (scan z = ${manifest.floor_z.toFixed(3)}, lên = ${manifest.up_axis})`;
+
+  const roomGeometry = firstMesh(await load('../scene_old/room_carved.glb'));
+  roomGeometry.computeVertexNormals();
+  roomGeometry.computeBoundsTree();
+  room = new THREE.Mesh(roomGeometry, surfaceMaterial(roomGeometry));
+  scene.add(room);
+
+  for (const entry of manifest.objects) {
+    const geometry = firstMesh(await load(`../scene_old/${entry.file}`));
+    geometry.computeBoundingBox();
+    const pivot = geometry.boundingBox.getCenter(new THREE.Vector3());
+    geometry.translate(-pivot.x, -pivot.y, -pivot.z);
+    geometry.computeVertexNormals();
+
+    geometry.computeBoundsTree();   // bodies are raycast targets for each other
+    const mesh = new THREE.Mesh(geometry, surfaceMaterial(geometry));
+    mesh.position.copy(pivot);
+    mesh.updateMatrixWorld(true);
+    scene.add(mesh);
+
+    const size = geometry.boundingBox.getSize(new THREE.Vector3());
+    bodies.push({
+      name: entry.name, label: entry.semantic_class, mesh,
+      feet: feetOf(geometry, 40), home: pivot.clone(),
+      velocity: 0, held: false, resting: true, onto: null, strayed: false,
+      area: Math.max(0.01, size.x * size.z),   // horizontal area, for air drag
+      impact: null,
+    });
+  }
+
+  const box = new THREE.Box3().setFromObject(room);
+  roomBox = box.clone().expandByScalar(STRAY);
+  const centre = box.getCenter(new THREE.Vector3());
+  const reach = box.getSize(new THREE.Vector3()).length();
+  camera.position.copy(centre).add(new THREE.Vector3(reach * 0.18, reach * 0.16, reach * 0.30));
+  controls.target.copy(centre);
+  controls.update();
+
+  buildList();
+  el('load').remove();
+  renderer.setAnimationLoop(tick);
+})().catch(err => { el('load').textContent = 'lỗi nạp: ' + err.message; console.error(err); });
+
+function buildList() {
+  const list = el('list');
+  list.innerHTML = '';
+  for (const body of bodies) {
+    const item = document.createElement('li');
+    item.innerHTML = `<span>${body.label}</span><span class="st">${body.name.slice(4, 8)}</span>`;
+    item.onclick = () => { select(body); frame(body); };
+    body.item = item;
+    list.appendChild(item);
+  }
+}
+
+function select(body) {
+  if (selected) selected.mesh.material.emissive.setHex(0x000000);
+  selected = body;
+  for (const other of bodies) other.item.classList.toggle('on', other === body);
+  if (body) body.mesh.material.emissive.setHex(0x1d4030);
+  el('m-sel').textContent = body ? body.label : '—';
+}
+
+function frame(body) {
+  const target = body.mesh.position;
+  const offset = camera.position.clone().sub(controls.target);
+  const span = new THREE.Box3().setFromObject(body.mesh).getSize(new THREE.Vector3()).length();
+  controls.target.copy(target);
+  camera.position.copy(target).add(offset.setLength(Math.max(2.2, span * 2.0)));
+  controls.update();
+}
+
+// ---- dragging -------------------------------------------------------------
+const pointer = new THREE.Vector2();
+const dragPlane = new THREE.Plane();
+const grabOffset = new THREE.Vector3();
+const hitPoint = new THREE.Vector3();
+let dragging = null;
+
+function setPointer(event) {
+  pointer.x = (event.clientX / innerWidth) * 2 - 1;
+  pointer.y = -(event.clientY / innerHeight) * 2 + 1;
+}
+
+renderer.domElement.addEventListener('pointerdown', event => {
+  if (event.button !== 0) return;
+  setPointer(event);
+  raycaster.setFromCamera(pointer, camera);
+  raycaster.far = Infinity;
+  const hit = raycaster.intersectObjects(bodies.map(b => b.mesh), false)[0];
+  if (!hit) return;
+  dragging = bodies.find(b => b.mesh === hit.object);
+  select(dragging);
+  dragging.held = true;
+  dragging.velocity = 0;
+  dragging.resting = false;
+  dragging.impact = null;
+  dragging.strayed = false;
+  wakeAll(dragging);
+  // Drag across a plane facing the camera through the grab point, so pulling
+  // the mouse up genuinely raises the object rather than sliding it away.
+  dragPlane.setFromNormalAndCoplanarPoint(camera.getWorldDirection(new THREE.Vector3()).negate(), hit.point);
+  grabOffset.copy(dragging.mesh.position).sub(hit.point);
+  controls.enabled = false;
+  renderer.domElement.setPointerCapture(event.pointerId);
+});
+
+renderer.domElement.addEventListener('pointermove', event => {
+  if (!dragging) return;
+  setPointer(event);
+  raycaster.setFromCamera(pointer, camera);
+  if (raycaster.ray.intersectPlane(dragPlane, hitPoint)) {
+    dragging.mesh.position.copy(hitPoint).add(grabOffset);
+    dragging.mesh.updateMatrixWorld(true);
+    // Sideways the body passes through anything; downwards it stops on whatever
+    // is under it, so a crate cannot be pushed through the bench holding it.
+    const lift = liftOutOfFloor(dragging);
+    if (lift > 0) {
+      dragging.mesh.position.y += lift;
+      dragging.mesh.updateMatrixWorld(true);
+    }
+    wakeAll(dragging);   // whatever was standing on it no longer is
+  }
+});
+
+function drop(event) {
+  if (!dragging) return;
+  dragging.held = false;
+  dragging.resting = false;
+  dragging = null;
+  controls.enabled = true;
+  if (event) renderer.domElement.releasePointerCapture(event.pointerId);
+}
+renderer.domElement.addEventListener('pointerup', drop);
+renderer.domElement.addEventListener('pointercancel', drop);
+
+el('reset').onclick = () => {
+  for (const body of bodies) {
+    body.mesh.position.copy(body.home);
+    body.mesh.updateMatrixWorld(true);
+    body.velocity = 0; body.resting = true; body.held = false;
+    body.impact = null; body.strayed = false; body.onto = null;
+  }
+};
+
+// ---- integration ----------------------------------------------------------
+const clock = new THREE.Clock();
+
+function wakeAll(mover) {
+  // A body that moves can pull the ground out from under whatever sits on it,
+  // so nothing may stay asleep on the strength of a stale contact.
+  for (const other of bodies) {
+    if (other !== mover && !other.held) other.resting = false;
+  }
+}
+
+function step(body, dt) {
+  if (body.held || body.resting || !room) return;
+
+  // Quadratic air drag opposes the fall, which is the only place the 10 kg
+  // actually enters the motion: a heavier body sheds drag faster.
+  const drag = 0.5 * AIR_RHO * DRAG_CD * body.area * body.velocity * Math.abs(body.velocity);
+  body.velocity += (GRAVITY - drag / MASS) * dt;
+
+  const wanted = body.velocity * dt;
+  const support = supportBelow(body);
+  body.onto = support.onto;
+
+  if (wanted >= support.distance - REST_EPS) {
+    body.mesh.position.y -= Math.max(0, support.distance - REST_EPS);
+    body.impact = 0.5 * MASS * body.velocity * body.velocity;
+    if (body.velocity > 0.7) {
+      body.velocity = -body.velocity * BOUNCE;
+    } else {
+      body.velocity = 0;
+      body.resting = true;
+    }
+  } else {
+    body.mesh.position.y -= wanted;
+  }
+
+  body.mesh.updateMatrixWorld(true);
+  wakeAll(body);
+}
+
+function containStray(body) {
+  // Belt and braces: the extended floor already catches a body dragged through
+  // a wall, but a fling far out sideways would leave it unreachable.
+  if (!roomBox || roomBox.containsPoint(body.mesh.position)) return;
+  body.mesh.position.copy(body.home);
+  body.mesh.updateMatrixWorld(true);
+  body.velocity = 0;
+  body.resting = true;
+  body.strayed = true;
+}
+
+function tick() {
+  const dt = Math.min(clock.getDelta(), 1 / 30);
+  for (const body of bodies) { step(body, dt); containStray(body); }
+  controls.update();
+
+  for (const body of bodies) {
+    body.item.classList.toggle('fall', !body.resting && !body.held);
+  }
+  if (selected) {
+    const support = room ? supportBelow(selected) : { distance: Infinity, onto: null };
+    el('m-drop').textContent = isFinite(support.distance) ? `${fmt(support.distance)} m` : '—';
+    el('m-onto').textContent = selected.strayed ? 'đã bị gọi về chỗ cũ' : (support.onto || '—');
+    el('m-vel').textContent = selected.resting ? 'đang nằm yên'
+      : (selected.held ? 'đang cầm' : `${fmt(Math.abs(selected.velocity))} m/s`);
+    el('m-ke').textContent = selected.impact ? `${fmt(selected.impact, 1)} J` : '—';
+  }
+  renderer.render(scene, camera);
+}
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>

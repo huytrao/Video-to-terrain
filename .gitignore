@@ -94,3 +94,17 @@ source-reference/
 !/output/REPORT/media/
 /output/REPORT/media/*
 !/output/REPORT/media/fig_*.png
+# Demo-surface pages: the interactive physics viewer (old OUTPUT_K scene),
+# the Hunyuan3D finished-objects gallery, and the recording script. Pages and
+# metadata are tracked; the GLBs/videos they load stay local + in the handover
+# zip, same policy as the report itself.
+!/output/REPORT/viewer/
+!/output/REPORT/objects3d/
+/output/REPORT/objects3d/*
+!/output/REPORT/objects3d/index.html
+!/output/REPORT/objects3d/objects_report.json
+!/output/REPORT/scene_old/
+/output/REPORT/scene_old/*
+!/output/REPORT/scene_old/carve_manifest.json
+!/output/REPORT/KICH_BAN_QUAY.md
+!/output/REPORT/KICH_BAN_QUAY.md

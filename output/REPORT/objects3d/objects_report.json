@@ -1,0 +1,53 @@
+[
+  {
+    "faces": 613030,
+    "vertices": 306417,
+    "extent_m": [
+      2.129,
+      1.229,
+      0.851
+    ],
+    "longest_m": 2.13,
+    "volume_m3": 0.1961,
+    "watertight": true,
+    "glb": "obj_0179_workbench.glb",
+    "glb_mb": 11.03,
+    "quad": "obj_0179_workbench_4views.png",
+    "turntable": "obj_0179_workbench_turntable.mp4",
+    "name": "obj_0179_workbench"
+  },
+  {
+    "faces": 367092,
+    "vertices": 183548,
+    "extent_m": [
+      0.204,
+      0.176,
+      0.232
+    ],
+    "longest_m": 0.23,
+    "volume_m3": 0.0001,
+    "watertight": true,
+    "glb": "obj_0202_blade.glb",
+    "glb_mb": 6.61,
+    "quad": "obj_0202_blade_4views.png",
+    "turntable": "obj_0202_blade_turntable.mp4",
+    "name": "obj_0202_blade"
+  },
+  {
+    "faces": 753946,
+    "vertices": 376930,
+    "extent_m": [
+      0.617,
+      0.584,
+      0.711
+    ],
+    "longest_m": 0.71,
+    "volume_m3": 0.0732,
+    "watertight": false,
+    "glb": "obj_0203_trash_can.glb",
+    "glb_mb": 13.57,
+    "quad": "obj_0203_trash_can_4views.png",
+    "turntable": "obj_0203_trash_can_turntable.mp4",
+    "name": "obj_0203_trash_can"
+  }
+]

@@ -127,13 +127,25 @@ footer{padding:36px 0 70px;color:var(--dim);font-size:13.5px;line-height:1.7}
 </section>
 
 <section>
+  <h2>Đầu vào trông như thế nào</h2>
+  <p class="sub">Bốn khung lấy từ 852 khung của video. Không dàn dựng, không đèn, không
+  bảng hiệu chuẩn — đúng chất lượng của một lần cầm điện thoại đi quanh xưởng.</p>
+  <figure>
+    <img src="media/fig_input_frames.png" alt="Bốn khung hình lấy từ video đầu vào">
+    <figcaption>Ghi nhớ mấy chi tiết này để đối chiếu với mesh bên dưới: <b>máy hút bụi
+    xanh</b>, <b>cửa gỗ màu cam</b>, <b>dãy cửa sổ nhìn ra cây</b>, <b>sàn xanh lá</b>.</figcaption>
+  </figure>
+</section>
+
+<section>
   <h2>Căn phòng dựng được</h2>
   <p class="sub">Ba góc nhìn của cùng một mesh, dựng từ chính lần chạy này. Cửa sổ, máy móc,
   tủ tường và đèn trần đều đọc được — màu lấy từ ảnh gốc, không tô lại.</p>
   <figure>
     <img src="media/fig_room_views.png" alt="Ba góc nhìn của căn phòng đã tái dựng">
-    <figcaption><b>20,6 triệu tam giác</b> từ 852 khung hình. Bên trái và giữa là hai góc đối
-    diện; bên phải nhìn từ trên xuống, thấy được bố cục mặt bằng.</figcaption>
+    <figcaption><b>20,6 triệu tam giác</b> từ 852 khung hình. Đối chiếu với ảnh đầu vào ở
+    trên: <b>cửa gỗ cam</b> ở hai đầu phòng, <b>dãy cửa sổ</b> và mảng cây xanh phía sau,
+    <b>sàn xanh lá</b>, đèn trần. Bên phải nhìn từ trên xuống cho thấy bố cục mặt bằng.</figcaption>
   </figure>
 </section>
 
@@ -147,6 +159,73 @@ footer{padding:36px 0 70px;color:var(--dim);font-size:13.5px;line-height:1.7}
     <figcaption>Năm vật nhận ra được bằng mắt, mỗi cái là một mesh độc lập có màu và lưới
     va chạm riêng. Tên do mô hình thị giác-ngôn ngữ gán, tôi giữ nguyên nhãn nó đưa ra.</figcaption>
   </figure>
+</section>
+
+<section>
+  <h2>So với các cách làm khác</h2>
+  <p class="sub">Ba cách phổ biến để có một môi trường 3D cho robot. Bảng này để chỉ ra
+  cách của em <b>khác ở đâu</b> — không phải để nói nó tốt hơn ở mọi mặt, vì không phải vậy.</p>
+  <div class="tw">
+  <table>
+    <tr>
+      <th>Tiêu chí</th>
+      <th>Quét LiDAR</th>
+      <th>Dựng tay (Blender)</th>
+      <th>Cách này</th>
+    </tr>
+    <tr>
+      <td><b>Thiết bị</b></td>
+      <td>Máy quét chuyên dụng</td>
+      <td>Không cần</td>
+      <td class="good">Điện thoại</td>
+    </tr>
+    <tr>
+      <td><b>Công một cảnh</b></td>
+      <td>Nửa ngày quét + xử lý</td>
+      <td>Vài ngày tới một tuần</td>
+      <td class="good">Đi bộ 5 phút + 4 giờ máy chạy</td>
+    </tr>
+    <tr>
+      <td><b>Độ chính xác hình học</b></td>
+      <td class="good">Sai số mm, có đơn vị mét</td>
+      <td>Do người dựng quyết định</td>
+      <td>Tỉ lệ tương đối đúng, <b>chưa hiệu chuẩn mét</b></td>
+    </tr>
+    <tr>
+      <td><b>Ngoại quan</b></td>
+      <td>Thường phải chụp ảnh riêng</td>
+      <td>Phải vẽ vật liệu bằng tay</td>
+      <td class="good">Màu lấy thẳng từ video</td>
+    </tr>
+    <tr>
+      <td><b>Ngữ nghĩa</b></td>
+      <td>Phải gán nhãn thủ công</td>
+      <td>Có sẵn theo cách dựng</td>
+      <td class="good">Tự động, mô hình ngôn ngữ gán</td>
+    </tr>
+    <tr>
+      <td><b>Vật thể tách rời</b></td>
+      <td>Một khối liền, phải cắt tay</td>
+      <td class="good">Tách sẵn theo thiết kế</td>
+      <td>28/46 khối dùng được</td>
+    </tr>
+    <tr class="hi">
+      <td><b>Mở rộng số cảnh</b></td>
+      <td>Giới hạn bởi thiết bị</td>
+      <td>Giới hạn bởi người</td>
+      <td class="good">Giới hạn bởi số chỗ quay được</td>
+    </tr>
+  </table>
+  </div>
+  <div class="card">
+    <h3>Điểm khác biệt thật sự nằm ở hàng cuối</h3>
+    <p>LiDAR chính xác hơn về hình học, dựng tay sạch hơn về vật thể — em không tranh hai
+    điểm đó. Nhưng cả hai đều <b>không mở rộng được theo số lượng</b>: một cái giới hạn bởi
+    thiết bị, một cái giới hạn bởi giờ công.</p>
+    <p>Cách này đánh đổi độ chính xác tuyệt đối để lấy <b>chi phí biên gần bằng không</b>.
+    Với bài toán huấn luyện robot — nơi cần nhiều môi trường đa dạng hơn là vài môi trường
+    hoàn hảo — em cho rằng đó là đánh đổi đúng hướng.</p>
+  </div>
 </section>
 
 <section>
@@ -337,6 +416,11 @@ footer{padding:36px 0 70px;color:var(--dim);font-size:13.5px;line-height:1.7}
   <p class="sub">Mở trong trình duyệt: kéo chuột để nhấc và di chuyển vật thể, thanh trượt
   chỉnh trọng lực, khối lượng, độ nảy. Không cần cài gì.</p>
   <a class="cta" href="viewer/index.html">Mở mô hình tương tác →</a>
+  <a class="cta" href="objects3d/index.html">Xem 3 vật hoàn thiện →</a>
+  <p class="sub" style="margin-top:1rem">Hai trang này dựng trên <b>bản đã kiểm bằng tay</b>:
+  8 vật rời trong scene vật lý, và 3 vật đã hoàn thiện mặt khuất bằng Hunyuan3D rồi ghép
+  ngược về đúng vị trí trong phòng. Con số 46/28 ở trên là sản lượng của bước tách tự động
+  — nhiều hơn, nhưng chưa qua kiểm tay như 11 vật này.</p>
 </section>
 
 <section>

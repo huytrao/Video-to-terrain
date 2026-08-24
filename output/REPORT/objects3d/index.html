@@ -1,0 +1,90 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Completed objects — 3D</title>
+<script type="module"
+  src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+<style>
+  :root{--bg:#faf9f7;--fg:#1b1a18;--mut:#6c6660;--card:#fff;--line:#e4dfd7;
+        --ok:#1a7f4b;--warn:#a8410f;--chip:#f1ede6;}
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#151419;--fg:#ecebf0;--mut:#9a95a2;--card:#1e1d24;--line:#33313b;
+    --ok:#5fd39b;--warn:#f0a06a;--chip:#2a2832;}}
+  *{box-sizing:border-box}
+  body{margin:0;padding:2.2rem 1.25rem 5rem;background:var(--bg);color:var(--fg);
+       font:15px/1.55 ui-sans-serif,-apple-system,"Segoe UI",sans-serif;}
+  .wrap{max-width:1180px;margin:0 auto}
+  h1{font-size:1.55rem;margin:0 0 .3rem}
+  .sub{color:var(--mut);margin:0 0 2rem;font-family:ui-monospace,monospace;font-size:.85rem}
+  article{background:var(--card);border:1px solid var(--line);border-radius:14px;
+          padding:1rem;margin-bottom:1.3rem}
+  h2{font-size:1rem;margin:0 0 .8rem;font-family:ui-monospace,monospace}
+  .pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:.8rem}
+  .live,.fallback{position:relative}
+  model-viewer{width:100%;aspect-ratio:1;border-radius:10px;background:#101014;
+               --poster-color:transparent}
+  video{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;background:#101014}
+  .none{aspect-ratio:1;display:grid;place-items:center;border-radius:10px;
+        border:1px dashed var(--line);color:var(--mut);font-size:.82rem}
+  .hint{position:absolute;left:.6rem;bottom:.6rem;background:rgba(0,0,0,.62);
+        color:#fff;border-radius:99px;padding:.1rem .55rem;font-size:.7rem;
+        font-family:ui-monospace,monospace}
+  .quad{display:block;margin-top:.8rem}
+  .quad img{width:100%;border-radius:10px;display:block}
+  dl{display:flex;flex-wrap:wrap;gap:.4rem .6rem;margin:.9rem 0 0}
+  dl div{background:var(--chip);border-radius:99px;padding:.16rem .6rem;
+         display:flex;gap:.4rem;font-size:.78rem;font-family:ui-monospace,monospace}
+  dt{color:var(--mut)} dd{margin:0}
+  dd.ok{color:var(--ok)} dd.warn{color:var(--warn)}
+  a{color:inherit}
+</style>
+<div class="wrap">
+  <h1>Completed objects — 3D</h1>
+  <p style="margin:0 0 1.2rem"><a href="../viewer/index.html"
+     style="font-family:ui-monospace,monospace;font-size:.82rem">← về scene tương tác</a></p>
+  <p class="sub">3 objects · 31 MB of GLB · Hunyuan3D meshes aligned back into the room's frame</p>
+  <article>
+  <h2>obj_0179_workbench</h2>
+  <div class="pair">
+    <div class="live"><model-viewer src="obj_0179_workbench.glb" camera-controls auto-rotate shadow-intensity="1" exposure="1.1" alt="obj_0179_workbench"></model-viewer><span class="hint">drag to orbit</span></div>
+    <div class="fallback"><video src="obj_0179_workbench_turntable.mp4" autoplay muted loop playsinline></video><span class="hint">turntable</span></div>
+  </div>
+  <a class="quad" href="obj_0179_workbench_4views.png"><img src="obj_0179_workbench_4views.png" alt="four views" loading="lazy"></a>
+  <dl>
+    <div><dt>size</dt><dd>2.129 × 1.229 × 0.851 m</dd></div>
+    <div><dt>faces</dt><dd>613,030</dd></div>
+    <div><dt>volume</dt><dd>0.1961 m³</dd></div>
+    <div><dt>watertight</dt><dd class="ok">True</dd></div>
+    <div><dt>file</dt><dd><a href="obj_0179_workbench.glb">obj_0179_workbench.glb</a> · 11.03 MB</dd></div>
+  </dl>
+</article>
+<article>
+  <h2>obj_0202_blade</h2>
+  <div class="pair">
+    <div class="live"><model-viewer src="obj_0202_blade.glb" camera-controls auto-rotate shadow-intensity="1" exposure="1.1" alt="obj_0202_blade"></model-viewer><span class="hint">drag to orbit</span></div>
+    <div class="fallback"><video src="obj_0202_blade_turntable.mp4" autoplay muted loop playsinline></video><span class="hint">turntable</span></div>
+  </div>
+  <a class="quad" href="obj_0202_blade_4views.png"><img src="obj_0202_blade_4views.png" alt="four views" loading="lazy"></a>
+  <dl>
+    <div><dt>size</dt><dd>0.204 × 0.176 × 0.232 m</dd></div>
+    <div><dt>faces</dt><dd>367,092</dd></div>
+    <div><dt>volume</dt><dd>0.0001 m³</dd></div>
+    <div><dt>watertight</dt><dd class="ok">True</dd></div>
+    <div><dt>file</dt><dd><a href="obj_0202_blade.glb">obj_0202_blade.glb</a> · 6.61 MB</dd></div>
+  </dl>
+</article>
+<article>
+  <h2>obj_0203_trash_can</h2>
+  <div class="pair">
+    <div class="live"><model-viewer src="obj_0203_trash_can.glb" camera-controls auto-rotate shadow-intensity="1" exposure="1.1" alt="obj_0203_trash_can"></model-viewer><span class="hint">drag to orbit</span></div>
+    <div class="fallback"><video src="obj_0203_trash_can_turntable.mp4" autoplay muted loop playsinline></video><span class="hint">turntable</span></div>
+  </div>
+  <a class="quad" href="obj_0203_trash_can_4views.png"><img src="obj_0203_trash_can_4views.png" alt="four views" loading="lazy"></a>
+  <dl>
+    <div><dt>size</dt><dd>0.617 × 0.584 × 0.711 m</dd></div>
+    <div><dt>faces</dt><dd>753,946</dd></div>
+    <div><dt>volume</dt><dd>0.0732 m³</dd></div>
+    <div><dt>watertight</dt><dd class="warn">False</dd></div>
+    <div><dt>file</dt><dd><a href="obj_0203_trash_can.glb">obj_0203_trash_can.glb</a> · 13.57 MB</dd></div>
+  </dl>
+</article>
+</div>

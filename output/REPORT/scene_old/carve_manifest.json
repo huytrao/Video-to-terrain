@@ -1,0 +1,245 @@
+{
+  "room_source": "outputs-full-factory/delivery/OUTPUT_B1/mesh/room_300k.glb",
+  "up_axis": "-Z",
+  "floor_z": -0.1548,
+  "gravity_world": [
+    0.0,
+    0.0,
+    9.81
+  ],
+  "room_faces_before": 300000,
+  "room_faces_after": 286866,
+  "holes_patched": 401,
+  "holes_too_large_to_patch": 0,
+  "objects": [
+    {
+      "name": "obj_0202_blade",
+      "semantic_class": "blade",
+      "faces": 202,
+      "vertices": 125,
+      "area_m2": 0.127,
+      "back_caps": 0,
+      "parts_found": 2,
+      "centroid": [
+        7.3038,
+        5.5421,
+        -1.4439
+      ],
+      "bounds_min": [
+        7.2197,
+        5.3903,
+        -1.5607
+      ],
+      "bounds_max": [
+        7.4172,
+        5.685,
+        -1.2798
+      ],
+      "clearance_to_floor_m": 1.125,
+      "file": "objects/obj_0202_blade.glb"
+    },
+    {
+      "name": "obj_0185_box",
+      "semantic_class": "box",
+      "faces": 420,
+      "vertices": 255,
+      "area_m2": 0.495,
+      "back_caps": 0,
+      "parts_found": 2,
+      "centroid": [
+        5.7799,
+        6.1222,
+        -1.0826
+      ],
+      "bounds_min": [
+        5.4926,
+        5.913,
+        -1.2539
+      ],
+      "bounds_max": [
+        6.096,
+        6.439,
+        -0.9667
+      ],
+      "clearance_to_floor_m": 0.812,
+      "file": "objects/obj_0185_box.glb",
+      "backfilled_from": "outputs-full-factory/delivery/OUTPUT_J/obj_0185_box/mesh_textured.glb",
+      "backfill_faces": 5489,
+      "backfill_residual_cm": 4.16,
+      "backfill_scale": 1.0,
+      "backfill_yaw_deg": 180.0
+    },
+    {
+      "name": "obj_0186_box",
+      "semantic_class": "box",
+      "faces": 394,
+      "vertices": 233,
+      "area_m2": 0.413,
+      "back_caps": 0,
+      "parts_found": 3,
+      "centroid": [
+        6.3533,
+        5.9549,
+        -1.0884
+      ],
+      "bounds_min": [
+        6.1283,
+        5.7255,
+        -1.245
+      ],
+      "bounds_max": [
+        6.6454,
+        6.3181,
+        -0.9749
+      ],
+      "clearance_to_floor_m": 0.82,
+      "file": "objects/obj_0186_box.glb",
+      "backfilled_from": "outputs-full-factory/delivery/OUTPUT_J/obj_0186_box/mesh_textured.glb",
+      "backfill_faces": 309,
+      "backfill_residual_cm": 2.92,
+      "backfill_scale": 1.0,
+      "backfill_yaw_deg": 0.0
+    },
+    {
+      "name": "obj_0300_crate",
+      "semantic_class": "crate",
+      "faces": 294,
+      "vertices": 193,
+      "area_m2": 0.344,
+      "back_caps": 0,
+      "parts_found": 1,
+      "centroid": [
+        6.0651,
+        6.0005,
+        -1.3536
+      ],
+      "bounds_min": [
+        5.5682,
+        5.7798,
+        -1.509
+      ],
+      "bounds_max": [
+        6.4509,
+        6.2768,
+        -1.2285
+      ],
+      "clearance_to_floor_m": 1.074,
+      "file": "objects/obj_0300_crate.glb"
+    },
+    {
+      "name": "obj_0203_trash_can",
+      "semantic_class": "trash can",
+      "faces": 915,
+      "vertices": 533,
+      "area_m2": 0.603,
+      "back_caps": 0,
+      "parts_found": 22,
+      "centroid": [
+        3.4862,
+        7.1208,
+        -0.4421
+      ],
+      "bounds_min": [
+        3.2475,
+        6.9212,
+        -0.6863
+      ],
+      "bounds_max": [
+        3.771,
+        7.4406,
+        -0.1511
+      ],
+      "clearance_to_floor_m": -0.004,
+      "file": "objects/obj_0203_trash_can.glb",
+      "backfilled_from": "outputs-full-factory/delivery/OUTPUT_J/obj_0203_trash_can/mesh_textured.glb",
+      "backfill_faces": 4468,
+      "backfill_residual_cm": 4.53,
+      "backfill_scale": 1.0,
+      "backfill_yaw_deg": 0.0
+    },
+    {
+      "name": "obj_0179_workbench",
+      "semantic_class": "workbench",
+      "faces": 6501,
+      "vertices": 3437,
+      "area_m2": 3.87,
+      "back_caps": 0,
+      "parts_found": 102,
+      "centroid": [
+        6.1501,
+        6.1211,
+        -0.6312
+      ],
+      "bounds_min": [
+        4.9151,
+        5.4639,
+        -1.0412
+      ],
+      "bounds_max": [
+        7.1902,
+        6.8326,
+        -0.1211
+      ],
+      "clearance_to_floor_m": -0.034,
+      "file": "objects/obj_0179_workbench.glb",
+      "backfill_rejected_residual_cm": 8.5,
+      "backfilled_from": null
+    },
+    {
+      "name": "obj_0054_machine",
+      "semantic_class": "machine",
+      "faces": 14580,
+      "vertices": 7258,
+      "area_m2": 7.802,
+      "back_caps": 0,
+      "parts_found": 87,
+      "centroid": [
+        1.6885,
+        5.4425,
+        -0.9611
+      ],
+      "bounds_min": [
+        1.0116,
+        4.8062,
+        -1.8325
+      ],
+      "bounds_max": [
+        2.1833,
+        6.142,
+        -0.1443
+      ],
+      "clearance_to_floor_m": -0.01,
+      "file": "objects/obj_0054_machine.glb",
+      "backfill_rejected_residual_cm": 5.75,
+      "backfilled_from": null
+    },
+    {
+      "name": "obj_0180_workbench",
+      "semantic_class": "workbench",
+      "faces": 5696,
+      "vertices": 3290,
+      "area_m2": 4.024,
+      "back_caps": 0,
+      "parts_found": 62,
+      "centroid": [
+        4.0492,
+        7.0438,
+        -0.8011
+      ],
+      "bounds_min": [
+        3.0817,
+        6.4791,
+        -1.2083
+      ],
+      "bounds_max": [
+        5.0883,
+        7.9458,
+        -0.1568
+      ],
+      "clearance_to_floor_m": 0.002,
+      "file": "objects/obj_0180_workbench.glb",
+      "backfill_rejected_residual_cm": 6.96,
+      "backfilled_from": null
+    }
+  ]
+}
