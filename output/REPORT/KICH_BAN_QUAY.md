@@ -1,163 +1,205 @@
-# Kịch bản quay video demo — 4 phút
+# Kịch bản quay video demo — 6 phút
 
-Hai tab đã mở sẵn:
+**Mục tiêu:** cho người xem thấy *toàn bộ* những gì pipeline trích ra từ một
+video điện thoại — không chỉ mesh đẹp, mà từng lớp dữ liệu dùng được riêng.
+
+Bốn tab mở sẵn:
 
 - **Tab 1 — Báo cáo:** http://127.0.0.1:8790/index.html
 - **Tab 2 — Scene tương tác:** http://127.0.0.1:8790/viewer/index.html
 - **Tab 3 — 3 vật hoàn thiện:** http://127.0.0.1:8790/objects3d/index.html
 
 Quay màn hình, không cần webcam. Nói theo gạch đầu dòng, đừng đọc nguyên văn.
+Mỗi đoạn phim nhúng trong báo cáo dài 3–7 giây, bấm play là đủ.
 
 ---
 
-## 0:00–0:25 · Mở đầu — đặt câu hỏi trước, đừng khoe kết quả
+## 0:00–0:30 · Mở đầu — đặt câu hỏi trước, đừng khoe kết quả
 
-**Màn hình:** Tab 1, phần tiêu đề.
+**Màn hình:** Tab 1, tiêu đề + sơ đồ "Vào một thứ, ra một kho".
 
-> "Em đặt một câu hỏi: một đoạn video quay tay bằng điện thoại thì chứa được bao
-> nhiêu thông tin 3D, nếu mình khai thác đến cùng?
+> "Em đặt một câu hỏi: một video quay tay bằng điện thoại chứa được bao nhiêu
+> thông tin, nếu mình khai thác đến cùng?
 >
-> Đây là câu trả lời. Đầu vào là 852 khung hình quay tay. Đầu ra là bảy lớp dữ
-> liệu — không LiDAR, không dựng tay."
+> Câu trả lời: **bảy lớp dữ liệu**, tất cả sinh tự động từ đúng một video —
+> camera poses, độ sâu, gaussian splatting, mesh có màu, cắt ngang kiểm chứng,
+> tách vật thể, và scene robot. Không LiDAR, không dựng tay."
 
-**Thao tác:** cuộn chậm xuống sơ đồ vào/ra, dừng 3 giây.
-
----
-
-## 0:25–0:55 · Đầu vào thật sự trông thế nào
-
-**Màn hình:** cuộn tới hình bốn khung hình đầu vào.
-
-> "Đây là chất lượng thật của đầu vào — không dàn dựng, không đèn, không bảng
-> hiệu chuẩn. Anh để ý mấy chi tiết này: máy hút bụi xanh, cửa gỗ cam, dãy cửa
-> sổ nhìn ra cây, sàn xanh lá."
-
-**Thao tác:** rê chuột chỉ từng vật khi nhắc tên. Chi tiết này quan trọng — nó
-cho người xem cái để đối chiếu ở bước sau.
+**Thao tác:** cuộn chậm qua sơ đồ, dừng 3 giây ở dòng "ra một kho".
 
 ---
 
-## 0:55–1:30 · Căn phòng dựng lại — để người xem tự kiểm chứng
+## 0:30–2:00 · Bảy lớp dữ liệu — phần chính của video
 
-**Màn hình:** cuộn tới hình ba góc phòng.
+Mục "Đọc kết quả" trong Tab 1 có 4 video nhúng; mỗi cái play 3–5 giây rồi pause,
+vừa phát vừa nói. Đây là chỗ thể hiện breadth — đừng lướt.
 
-> "Và đây là mesh dựng lại, 20,6 triệu tam giác. Anh so lại mấy chi tiết vừa
-> nãy: cửa gỗ cam ở hai đầu, dãy cửa sổ với cây phía sau, sàn xanh lá, đèn trần.
->
-> Màu lấy trực tiếp từ ảnh gốc, em không tô lại gì cả."
+### Lớp 1 — Đầu vào (video `01_dau_vao_video.mp4`, 7 giây)
 
-**Thao tác:** rê chuột chỉ đúng những vật vừa nhắc ở bước trước. Đây là khoảnh
-khắc thuyết phục nhất — đừng lướt nhanh.
+> "Đây là chất lượng thật của đầu vào: quay tay, không đèn, không bảng hiệu chuẩn.
+> Anh để ý máy hút bụi xanh, cửa gỗ cam, dãy cửa sổ nhìn ra cây — em sẽ đối chiếu
+> mấy chi tiết này ở các lớp sau."
+
+### Lớp 2 — Độ sâu (video `02_do_sau_da3.mp4`)
+
+> "Từ mỗi khung hình, Depth-Anything-3 suy ra khoảng cách tới từng bề mặt —
+> không cảm biến, thuần học từ ảnh. Đây là tầng dữ liệu đầu tiên."
+
+### Lớp 3 — Gaussian splatting (video `03_gaussian_splatting.md`)
+
+> "Song song đó là gaussian splatting: cảnh được biểu diễn bằng hàng triệu hạt
+> quang thực, nhìn từ góc mới vẫn photorealistic. Dùng để render novel views,
+> làm ground truth hình ảnh cho robot."
+
+### Lớp 4 — Mesh có màu (video `04_mesh_3d.mp4`)
+
+> "Gộp depth + splatting lại thành mesh 20,6 triệu tam giác, màu lấy trực tiếp
+> từ ảnh gốc — em không tô lại gì cả."
+
+### Lớp 5 — Cắt ngang (video `05_cat_ngang_phong.mp4`)
+
+> "Cắt bổ đôi phòng để xác nhận hình học bên trong đặc, không rỗng — đây là
+> bước kiểm định, không phải kết quả."
+
+### Lớp 6 — Tách vật thể (mục "Vật thể tách được", hình năm vật)
+
+> "Phần khó nhất: tách đồ khỏi phòng. Em nói thẳng con số — tự động ra 46 khối,
+> 28 khối đặc; phần demo sau là 8 vật đã kiểm tay. Sếp research sẽ tự kiểm, nên
+> em nói số thật ngay từ đầu."
+
+### Lớp 7 — Hộp vật lý (video `06_hop_vat_the.mp4`)
+
+> "Cuối cùng, mỗi vật được bọc hộp va chạm đúng kích thước — đây chính là thứ
+> robot dùng để chạm, nắm, di chuyển đồ. Video này là hộp đè lên phòng, nhìn từ
+> nhiều góc."
 
 ---
 
-## 1:30–2:00 · Vật thể tách rời — và nói thật về chất lượng
+## 2:00–2:40 · Đối chiếu ảnh gốc ↔ mesh — chỗ người xem tự thuyết phục mình
 
-**Màn hình:** cuộn tới hình năm vật thể.
+**Màn hình:** mục "Căn phòng dựng được" — hình ba góc phòng.
 
-> "Phần khó nhất là tách vật thể ra khỏi phòng. Đây là năm cái nhận ra được
-> bằng mắt: máy công cụ, bàn nguội có ngăn kéo, cửa, máy khoan đứng, giá đỡ.
->
-> Em nói thẳng con số: quy trình tách tự động ra 46 khối, trong đó 28 khối có
-> hình dạng đặc. Số còn lại là mảnh vỏ bóc khỏi tường — dùng được cho va chạm
-> nhưng không phải đồ vật. Phần em demo ngay sau đây là 8 vật đã kiểm bằng tay."
+> "Giờ đối chiếu với ảnh gốc lúc nãy: cửa gỗ cam hai đầu, dãy cửa sổ với cây,
+> sàn xanh lá, đèn trần — đều có trong mesh. Màu lấy từ ảnh gốc nên nhìn như
+> photo, nhưng đây là hình học thật, đo đạc được."
 
-**Vì sao nói vậy:** sếp làm research sẽ tự kiểm. Nói trước con số thật thì phần
-còn lại của báo cáo được tin; giấu đi mà bị phát hiện thì mất hết.
+**Thao tác:** rê chuột chỉ đúng những chi tiết đã nhắc ở lớp 1. Đừng lướt nhanh.
 
 ---
 
-## 2:00–2:50 · Demo tương tác — phần gây ấn tượng nhất
+## 2:40–3:40 · Demo tương tác — ấn tượng nhất
 
-**Màn hình:** chuyển sang Tab 2 (scene tương tác).
+**Màn hình:** Tab 2 (viewer scene cũ, 8 vật).
 
-> "Cái này chạy trực tiếp trong trình duyệt, tám vật rời trong phòng."
+> "Cái này chạy trực tiếp trong trình duyệt — tám vật rời có vật lý thật."
 
 **Thao tác theo thứ tự:**
 
 1. Xoay camera một vòng chậm quanh phòng — 5 giây
-2. Bấm một vật trong danh sách bên trái — camera bay tới, vật sáng lên
-3. **Kéo một vật** lên cao rồi thả — nó rơi, chạm mặt đỡ, nảy nhẹ
-4. Kéo một vật **đặt lên nóc bàn nguội** — nó dừng trên mặt bàn chứ không xuyên qua
-5. Bấm **Đưa tất cả về chỗ cũ** — mọi vật về đúng vị trí ban đầu
+2. Bấm tên một vật ở danh sách — camera bay tới, vật sáng lên
+3. **Kéo một vật lên cao rồi thả** — nó rơi, chạm mặt, nảy nhẹ
+4. Kéo vật **đặt lên nóc bàn nguội** — dừng trên mặt bàn, không xuyên qua
+5. **"Đưa tất cả về chỗ cũ"** — reset về vị trí ban đầu
 
-> "Vật rơi xuống sàn hay xuống mặt bàn là do va chạm tính thật, không phải đặt sẵn
-> độ cao. Đây là bước đệm để đưa scene này vào MuJoCo cho robot huấn luyện."
+> "Vật rơi xuống sàn hay xuống bàn là do raycast va chạm tính thật, không phải
+> đặt sẵn độ cao. Đây là bước đệm đưa scene vào MuJoCo cho robot huấn luyện."
 
 **Chuyển sang Tab 3 — 3 vật hoàn thiện:**
 
 6. Kéo xoay `obj_0179_workbench` một vòng
 7. Chỉ vào ảnh bốn góc bên dưới
 
-> "Ba vật này đã được sinh nốt mặt camera không nhìn thấy, rồi ghép ngược về đúng
-> vị trí trong phòng. Bàn nguội 613 nghìn tam giác, kín hoàn toàn — cái này thả vào
-> mô phỏng vật lý được ngay."
+> "Ba vật này đã được Hunyuan3D sinh nốt mặt camera không thấy, rồi ghép ngược
+> về đúng vị trí trong phòng. Bàn nguội 613 nghìn tam giác, kín hoàn toàn —
+> thả vào mô phỏng vật lý được ngay."
 
 ---
 
-## 2:50–3:30 · Đóng góp kỹ thuật — phần thể hiện năng lực
+## 3:40–4:20 · So sánh với cách làm khác
 
-**Màn hình:** quay lại Tab 1, cuộn tới hai biểu đồ.
+**Màn hình:** mục "So với các cách làm khác".
 
-> "Phần đóng góp của em không phải chạy được pipeline, mà là tìm ra bốn lỗi
-> im lặng — loại vẫn chạy trơn và vẫn trả số trông hợp lý.
->
-> Biểu đồ trái: mô hình được chấm điểm bằng chính những ảnh nó đã học. Em giữ
-> riêng 106 ảnh, giấu suốt 4 tiếng huấn luyện. Điểm thật là 24,17 chứ không phải
-> 25,08. Và có tập giữ riêng thì mới đọc được đường cong — sau 70.000 vòng gần
-> như không cải thiện, cắt ở đó tiết kiệm 1 tiếng 20 phút GPU mỗi lần chạy.
->
-> Biểu đồ phải: mô hình ngôn ngữ bịa ra 'cây' ở 91% số khung, trong một xưởng
-> kín. Em phát hiện bằng cách vẽ đường 'nhãn xuất hiện lần đầu ở đâu rồi bám dai
-> bao lâu'. Sau khi sửa còn 12% — và em hỏi lại thì hoá ra lần này có thật,
-> nhìn qua cửa sổ."
-
-**Thao tác:** dừng ở mỗi biểu đồ 5 giây, rê chuột theo đường cong khi giải thích.
+> "So với quét LiDAR hay dựng tay Blender thì thế nào? LiDAR thắng về độ chính
+> xác hình học; dựng tay thắng về tách vật sạch. Nhưng hàng cuối bảng mới là
+> điểm khác biệt thật: thêm một cảnh với cách này chỉ tốn **một lần đi bộ quay
+> video**, còn hai cách kia tốn thiết bị hoặc tuần nhân công. Với bài toán cần
+> hàng trăm cảnh đa dạng cho robot, đây mới là con đường khả thi."
 
 ---
 
-## 3:30–4:00 · Giới hạn và bước tiếp theo
+## 4:20–5:10 · Đóng góp kỹ thuật — tìm ra lỗi im lặng
 
-**Màn hình:** cuộn tới mục giới hạn rồi mục việc tiếp theo.
+**Màn hình:** quay lại Tab 1, hai biểu đồ ở mục "Bốn lỗi im lặng".
 
-> "Hai giới hạn em nói rõ. Thứ nhất, tỉ lệ chưa hiệu chuẩn tuyệt đối — em có thử
-> suy hệ số từ kích thước chuẩn của cửa, thang, xô, nhưng các ước lượng không
-> hội tụ nên em không dán một con số vào cho có.
+> "Phần đóng góp của em không phải chạy được pipeline — mà là bắt được bốn lỗi
+> chạy trơn nhưng trả số sai mà không phép đo nào bắt được.
 >
-> Thứ hai, có 334 vùng khuyết vì camera không nhìn được mặt sau máy móc. Em đã
-> thử lấp nhưng bỏ hướng đó — nó tạo ra hình học bịa.
+> Biểu đồ trái: mô hình bị chấm trên chính ảnh nó học. Em giữ riêng 106 ảnh,
+> giấu suốt 4 tiếng huấn luyện — điểm thật 24,17 chứ không phải 25,08. Và nhờ
+> có tập giữ riêng mới đọc được đường cong: sau 70.000 vòng gần như không cải
+> thiện, cắt ở đó tiết kiệm 1 tiếng 20 phút GPU mỗi lần chạy.
 >
-> Việc tiếp theo em xếp theo thứ tự: khoá tỉ lệ mét, sinh mặt khuất, chạy thử
-> trên cảnh thứ hai để kiểm tính khái quát, rồi xuất MJCF cho MuJoCo."
+> Biểu đồ phải: mô hình ngôn ngữ bịa 'cây' ở 91% khung, trong xưởng kín. Em
+> phát hiện bằng cách vẽ 'nhãn xuất hiện lần đầu ở đâu rồi bám dai bao lâu'.
+> Sau sửa còn 12% — và lần này có thật, nhìn xuyên cửa sổ."
+
+**Thao tác:** dừng 5 giây mỗi biểu đồ, rê chuột theo đường cong khi nói.
+
+---
+
+## 5:10–5:40 · Giới hạn — nói trước để báo cáo được tin
+
+**M màn hình:** mục "Giới hạn hiện tại".
+
+> "Hai giới hạn em nêu rõ. Thứ nhất, tỉ lệ chưa hiệu chuẩn tuyệt đối — em thử
+> suy từ kích thước cửa, thang, xô nhưng không hội tụ, nên em không dán số cho
+> có. Thứ hai, 334 vùng khuyết vì camera không nhìn được mặt sau máy móc; em đã
+> thử lấp nhưng bỏ hướng đó vì tạo hình học bịa."
+
+---
+
+## 5:40–6:00 · Kết — quay về câu hỏi đầu
+
+**Màn hình:** Tab 1, cuộn về sơ đồ "Vào một thứ, ra một kho".
+
+> "Quay lại câu hỏi đầu: bao nhiêu thông tin nằm trong một video? Câu trả lời
+> của em là bảy lớp — mỗi lớp một file, một định dạng chuẩn, dùng độc lập cho
+> việc khác nhau: render novel views, huấn luyện policy, mô phỏng vật lý, hay
+> làm ground truth. Việc tiếp theo: khoá tỉ lệ mét, sinh mặt khuất, chạy cảnh
+> thứ hai để kiểm tính khái quát, rồi xuất MJCF cho MuJoCo."
 
 ---
 
 ## Ba điều nên tránh
 
 **Đừng nói "hệ thống hoàn hảo".** Sếp research sẽ tìm chỗ hở ngay. Báo cáo này
-mạnh vì nó tự nêu giới hạn trước.
+mạnh vì tự nêu giới hạn trước.
 
-**Đừng lướt nhanh phần đối chiếu ảnh gốc ↔ mesh.** Đó là chỗ người xem tự
-thuyết phục mình, mạnh hơn mọi con số.
+**Đừng bỏ qua lớp gaussian splatting.** Nhiều người chưa biết kỹ thuật này —
+một câu "photorealistic từ mọi góc nhìn, không cần mesh" là đủ gây ấn tượng,
+và nó chứng minh breadth của data stack.
 
-**Đừng đọc số liệu như đọc bảng.** Mỗi con số nên kèm "vì sao nó quan trọng" —
-ví dụ 70.000 vòng không phải con số đẹp, mà là 1 tiếng 20 phút GPU tiết kiệm
-được mỗi lần chạy.
+**Đừng đọc số liệu như đọc bảng.** Mỗi con số kèm "vì sao quan trọng": 70.000
+vòng không phải số đẹp, mà là 1 giờ 20 phút GPU tiết kiệm mỗi lần chạy.
 
 ---
 
 ## Nếu bị hỏi vặn
 
 **"Sao PSNR thấp hơn báo cáo cũ?"**
-> Vì con số cũ đo sai. Nó chấm trên ảnh đã học nên chỉ nói mô hình thuộc bài đến
-> đâu. 24,17 thấp hơn nhưng là con số dùng được để so sánh giữa các lần chạy.
+> Vì con số cũ đo sai — chấm trên ảnh đã học nên chỉ nói mô hình thuộc bài đến
+> đâu. 24,17 thấp hơn nhưng là con số so sánh được giữa các lần chạy.
 
-**"46 vật mà chỉ 28 dùng được, có ít quá không?"**
-> Với một video quay tay không thiết bị thì đây là mức em đạt được hiện tại. Điểm
-> quan trọng là quy trình tự động — thêm một cảnh chỉ tốn một lần đi bộ, nên số
-> lượng mở rộng được. Chất lượng từng vật thì cải thiện bằng bước sinh mặt khuất.
+**"46 vật mà chỉ 28 dùng được, ít quá?"**
+> Với một video quay tay không thiết bị thì đây là mức hiện tại. Điểm quan trọng
+> là quy trình tự động — thêm một cảnh chỉ tốn một lần đi bộ quay, nên mở rộng
+> được. Chất lượng từng vật cải thiện bằng bước sinh mặt khuất.
+
+**"Splatting dùng làm gì nếu đã có mesh?"**
+> Hai cái phục vụ việc khác nhau. Mesh cho vật lý — va chạm cần bề mặt kín. Splatting
+> cho thị giác — render photorealistic từ góc camera chưa quay, dùng làm môi trường
+> huấn luyện vision hay ground truth so sánh.
 
 **"Chạy được trên cảnh khác không?"**
-> Mọi tham số đều suy từ chính cảnh chứ không hardcode — em đã sửa đúng chỗ đó.
-> Nên về nguyên tắc là chạy được, nhưng em chưa kiểm chứng, và em ghi nó là việc
-> ưu tiên trong danh sách tiếp theo.
+> Mọi tham số đều suy từ chính cảnh, không hardcode — em đã sửa đúng chỗ đó. Về
+> nguyên tắc chạy được, nhưng em chưa kiểm chứng và ghi nó là việc ưu tiên.
