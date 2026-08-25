@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Full Factory Scene — 38 vật thể hoàn thiện, từ mesh thô đến robot manipulation. Trình chiếu dạng slide.">
+<title>Full Factory Scene — Twin Data</title>
+<style>
+  :root {
+    --black: #1d1d1f; --gray: #6e6e73; --line: #d2d2d7; --light: #f5f5f7;
+    --blue: #06c; --green: #16834d; --orange: #ad5a00; --red: #b42318;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; color: var(--black); background: #fff;
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  img { display: block; max-width: 100%; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+
+  .topbar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 20px; background: rgba(255,255,255,.92);
+    border-bottom: 1px solid var(--line); backdrop-filter: saturate(180%) blur(18px);
+  }
+  .topbar a.back { font-size: 12px; font-weight: 600; color: var(--gray); }
+  .topbar a.back:hover { color: var(--black); }
+  .topbar .wordmark { font-size: 11px; font-weight: 700; letter-spacing: .1em; color: var(--gray); text-transform: uppercase; }
+
+  .deck { position: absolute; top: 0; bottom: 0; left: 0; right: 0; }
+  .slide {
+    display: none; position: absolute; inset: 0;
+    padding: 64px 6vw 84px; overflow-y: auto;
+    flex-direction: column; align-items: center; justify-content: center;
+    gap: 22px;
+  }
+  .slide.active { display: flex; }
+  .slide-inner { width: 100%; max-width: 1180px; margin: 0 auto; }
+
+  .eyebrow { margin: 0 0 8px; color: var(--gray); font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
+  h1 { margin: 0; font-size: clamp(32px, 5vw, 54px); font-weight: 600; letter-spacing: -.055em; line-height: 1.05; }
+  h2 { margin: 0 0 4px; font-size: clamp(24px, 3.4vw, 36px); font-weight: 600; letter-spacing: -.045em; line-height: 1.1; }
+  .lede { max-width: 760px; color: var(--gray); font-size: 16px; line-height: 1.5; margin: 10px 0 0; }
+  .lede strong { color: var(--black); }
+
+  .kpi-row { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 22px; }
+  .kpi { flex: 1 1 150px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--light); }
+  .kpi b { display: block; font-size: 26px; font-weight: 700; letter-spacing: -.02em; }
+  .kpi span { display: block; margin-top: 3px; color: var(--gray); font-size: 12px; }
+
+  .media-row { display: grid; gap: 14px; margin-top: 6px; width: 100%; }
+  .media-row.two { grid-template-columns: repeat(2, 1fr); }
+  .media-row img { width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--line); }
+  .media-card { text-align: center; }
+  .media-card .cap { margin-top: 6px; font-size: 12px; color: var(--gray); }
+  .media-card .cap code { font-size: 11px; }
+
+  .single-fig { width: 100%; text-align: center; }
+  .single-fig img { max-height: 58vh; width: auto; margin: 0 auto; border-radius: 10px; border: 1px solid var(--line); }
+  .single-fig .cap { margin-top: 8px; font-size: 12.5px; color: var(--gray); }
+
+  .grid16 { display: grid; grid-template-columns: repeat(8, 1fr); gap: 8px; margin-top: 10px; }
+  .grid16 figure { margin: 0; }
+  .grid16 img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 7px; border: 1px solid var(--line); }
+  .grid16 figcaption { margin-top: 3px; font-size: 10px; color: var(--gray); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  table.data { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13.5px; }
+  table.data th, table.data td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; }
+  table.data th { color: var(--gray); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+  table.data td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.data tr.best td { color: var(--green); font-weight: 700; }
+
+  .bar-chart { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .bar-row { display: grid; grid-template-columns: 90px 1fr 90px; align-items: center; gap: 10px; font-size: 13px; }
+  .bar-row .label { color: var(--gray); font-variant-numeric: tabular-nums; }
+  .bar-track { height: 16px; background: var(--light); border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--blue); border-radius: 4px; }
+  .bar-row .count { text-align: right; font-variant-numeric: tabular-nums; }
+
+  .tag-row { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+  .tag { padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .tag.green { background: #e6f4ec; color: var(--green); }
+  .tag.orange { background: #fbeee0; color: var(--orange); }
+  .tag.red { background: #fbe9e7; color: var(--red); }
+  .tag.gray { background: var(--light); color: var(--gray); }
+
+  .usecase-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 14px; width: 100%; }
+  .usecase { padding: 16px 18px; border: 1px solid var(--line); border-radius: 10px; }
+  .usecase .n { color: #a1a1a6; font-size: 12px; font-weight: 700; }
+  .usecase h3 { margin: 4px 0 6px; font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+  .usecase p { margin: 0; color: var(--gray); font-size: 12.5px; line-height: 1.45; }
+  .usecase .link { display: block; margin-top: 8px; font-size: 11.5px; color: var(--blue); }
+
+  .close-links { display: flex; gap: 20px; margin-top: 24px; flex-wrap: wrap; }
+  .close-links a { font-size: 14px; font-weight: 600; padding: 9px 16px; border: 1px solid var(--line); border-radius: 8px; color: var(--black); }
+  .close-links a:hover { background: var(--light); text-decoration: none; }
+
+  .navbar {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: center; gap: 18px;
+    padding: 14px 20px; background: rgba(255,255,255,.94);
+    border-top: 1px solid var(--line); backdrop-filter: saturate(180%) blur(18px);
+  }
+  .nav-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 16px; border: 1px solid var(--line); border-radius: 999px;
+    background: #fff; color: var(--black); font: inherit; font-size: 13px; font-weight: 600;
+    cursor: pointer;
+  }
+  .nav-btn:hover:not(:disabled) { background: var(--light); }
+  .nav-btn:disabled { opacity: .35; cursor: default; }
+  .dots { display: flex; gap: 6px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--line); cursor: pointer; border: 0; padding: 0; }
+  .dot.active { background: var(--black); width: 16px; border-radius: 3px; }
+  .counter { min-width: 52px; text-align: center; font-size: 12px; color: var(--gray); font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="back" href="../index.html">← Báo cáo chính</a>
+  <span class="wordmark">Full Factory Scene · Twin Data</span>
+  <a class="back" href="media/full_factory_contact_sheet.html" target="_blank">Contact sheet đầy đủ (38 vật) →</a>
+</div>
+
+<div class="deck" id="deck">
+
+  <!-- 1: Title -->
+  <section class="slide active">
+    <div class="slide-inner">
+      <p class="eyebrow">Full Factory Scene — mở rộng từ demo 3 vật</p>
+      <h1>Từ mesh thô đến scene robot sẵn sàng<br>— toàn bộ 38 vật trong nhà xưởng</h1>
+      <p class="lede">Cùng pipeline video → Twin Data, chạy trên nguyên căn xưởng thay vì
+        3 vật demo trước đó. 5 slide tiếp theo đi qua từng giai đoạn với dẫn chứng thật
+        từ output của chính lần chạy này: <code>OUTPUT_F/D_v2/J/G/I</code>.</p>
+      <div class="kpi-row">
+        <div class="kpi"><b>38</b><span>vật thể hoàn thiện</span></div>
+        <div class="kpi"><b>7.26 × 8.16 × 4.34 m</b><span>kích thước scene (X×Y×Z)</span></div>
+        <div class="kpi"><b>37 / 38</b><span>vật cần Hunyuan hoàn thiện (coverage &lt; 0.5)</span></div>
+        <div class="kpi"><b>20 / 15 / 3</b><span>nhặt được / vật cản tĩnh / bị loại (robot)</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2: Object Understanding (OUTPUT_F) -->
+  <section class="slide">
+    <div class="slide-inner">
+      <p class="eyebrow">Giai đoạn 4 — Object Understanding · <code>OUTPUT_F</code></p>
+      <h2>Mesh thô tách theo từng vật, trước khi hoàn thiện</h2>
+      <p class="lede">Mỗi vật được cắt ra khỏi scene tổng thành mesh riêng — <strong>chưa
+        texture, chưa lấp mặt khuất</strong>. Đây là input cho bước Coverage Analysis và
+        Completion phía sau. 2 ví dụ dưới là mesh raw thật, chưa qua chỉnh sửa.</p>
+      <div class="media-row two">
+        <div class="media-card">
+          <img src="media/obj_0052_machine_raw.png" alt="obj_0052_machine mesh raw">
+          <div class="cap"><code>obj_0052_machine</code> — 180,720 verts / 361,516 faces</div>
+        </div>
+        <div class="media-card">
+          <img src="media/obj_0219_table_raw.png" alt="obj_0219_table mesh raw">
+          <div class="cap"><code>obj_0219_table</code> — 338,663 verts / 677,360 faces</div>
+        </div>
+      </div>
+      <p class="lede" style="margin-top:14px; font-size:13px;">38 vật được tách theo cách này trong lần chạy — số liệu mesh ở trên đọc trực tiếp từ 2 file <code>mesh_raw.obj</code> có sẵn; các vật còn lại chỉ xuất <code>.glb</code>.</p>
+    </div>
+  </section>
+
+  <!-- 3: Coverage Analysis (D_v2) -->
+  <section class="slide">
+    <div class="slide-inner">
+      <p class="eyebrow">Giai đoạn 5 — Coverage Analysis · <code>OUTPUT_D_v2</code></p>
+      <h2>Camera có nhìn đủ mặt vật thể không?</h2>
+      <p class="lede">Mỗi vật được đo tỉ lệ góc nhìn đã quan sát được (coverage). Vật nào
+        &lt; 0.5 (thiếu mặt sau/mặt bên) mới được đưa qua Hunyuan3D — không áp dụng tràn lan.</p>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 8px; width:100%;">
+        <div>
+          <table class="data">
+            <tr><th>Quyết định</th><th class="num">Số vật</th></tr>
+            <tr><td><span class="tag orange">COMPLETE_WITH_HUNYUAN</span></td><td class="num">37</td></tr>
+            <tr><td><span class="tag green">REVIEW_OPTIONAL</span></td><td class="num">1</td></tr>
+          </table>
+        </div>
+        <div>
+          <div class="bar-chart">
+            <div class="bar-row"><span class="label">coverage 0.125</span><div class="bar-track"><div class="bar-fill" style="width:88%"></div></div><span class="count">15 vật</span></div>
+            <div class="bar-row"><span class="label">coverage 0.250</span><div class="bar-track"><div class="bar-fill" style="width:94%"></div></div><span class="count">16 vật</span></div>
+            <div class="bar-row"><span class="label">coverage 0.375</span><div class="bar-track"><div class="bar-fill" style="width:35%"></div></div><span class="count">6 vật</span></div>
+            <div class="bar-row"><span class="label">coverage 0.625</span><div class="bar-track"><div class="bar-fill" style="width:6%"></div></div><span class="count">1 vật</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="lede" style="margin-top:10px; font-size:13px;">Coverage trung bình toàn xưởng: <strong>0.230</strong> — video quay tay không đi vòng đủ mọi vật, nên phần lớn cần Hunyuan lấp mặt khuất.</p>
+    </div>
+  </section>
+
+  <!-- 4: Completion (OUTPUT_J) -->
+  <section class="slide">
+    <div class="slide-inner">
+      <p class="eyebrow">Giai đoạn 6 — Completion · <code>OUTPUT_J</code></p>
+      <h2>38 vật sau khi Hunyuan3D lấp mặt khuất + bake texture</h2>
+      <p class="lede">16 vật đại diện cho 16 nhóm ngữ nghĩa khác nhau trong xưởng —
+        ảnh <code>textured_preview.png</code> thật, không dựng tay.</p>
+      <div class="grid16">
+        <figure><img src="media/obj_0179_workbench_preview.png"><figcaption>workbench</figcaption></figure>
+        <figure><img src="media/obj_0202_blade_preview.png"><figcaption>blade</figcaption></figure>
+        <figure><img src="media/obj_0203_trash_can_preview.png"><figcaption>trash can</figcaption></figure>
+        <figure><img src="media/obj_0191_book_preview.png"><figcaption>book</figcaption></figure>
+        <figure><img src="media/obj_0181_box_preview.png"><figcaption>box</figcaption></figure>
+        <figure><img src="media/obj_0192_cabinet_preview.png"><figcaption>cabinet</figcaption></figure>
+        <figure><img src="media/obj_0221_cup_preview.png"><figcaption>cup</figcaption></figure>
+        <figure><img src="media/obj_0222_drawer_preview.png"><figcaption>drawer</figcaption></figure>
+        <figure><img src="media/obj_0033_hose_preview.png"><figcaption>hose</figcaption></figure>
+        <figure><img src="media/obj_0213_ladder_preview.png"><figcaption>ladder</figcaption></figure>
+        <figure><img src="media/obj_0052_machine_preview.png"><figcaption>machine</figcaption></figure>
+        <figure><img src="media/obj_0056_metal_preview.png"><figcaption>metal</figcaption></figure>
+        <figure><img src="media/obj_0223_radiator_preview.png"><figcaption>radiator</figcaption></figure>
+        <figure><img src="media/obj_0208_shelf_preview.png"><figcaption>shelf</figcaption></figure>
+        <figure><img src="media/obj_0219_table_preview.png"><figcaption>table</figcaption></figure>
+        <figure><img src="media/obj_0093_tool_preview.png"><figcaption>tool</figcaption></figure>
+      </div>
+      <p class="lede" style="margin-top:12px; font-size:13px;">Xem đầy đủ 38 vật: <a href="media/full_factory_contact_sheet.html" target="_blank">full_factory_contact_sheet.html →</a></p>
+    </div>
+  </section>
+
+  <!-- 5: Alignment & Verification (OUTPUT_G) -->
+  <section class="slide">
+    <div class="slide-inner">
+      <p class="eyebrow">Giai đoạn 7 — Alignment &amp; Verification · <code>OUTPUT_G</code></p>
+      <h2>Ghép mesh đã hoàn thiện ngược lại đúng vị trí trong xưởng</h2>
+      <p class="lede">Mỗi vật được thử khớp ở 4 góc xoay (0°/90°/180°/270°), so IoU giữa
+        mask render và mask quan sát thật — chọn góc IoU cao nhất. Đây là bước kiểm chứng,
+        không phải đặt tay.</p>
+      <table class="data" style="margin-top:16px;">
+        <tr><th>Góc xoay</th><th class="num">mean_mask_iou</th></tr>
+        <tr class="best"><td>0° (chọn)</td><td class="num">0.360</td></tr>
+        <tr><td>90°</td><td class="num">0.213</td></tr>
+        <tr><td>180°</td><td class="num">0.343</td></tr>
+        <tr><td>270°</td><td class="num">0.246</td></tr>
+      </table>
+      <p class="lede" style="margin-top:6px; font-size:12.5px;">Ví dụ: <code>obj_0179_workbench</code> — <code>alignment_meta.json</code>.</p>
+      <div class="kpi-row" style="margin-top:18px;">
+        <div class="kpi"><b>0.293</b><span>IoU trung bình, 38 vật</span></div>
+        <div class="kpi"><b>0.649</b><span>IoU cao nhất đạt được</span></div>
+        <div class="kpi"><b>0.016</b><span>IoU thấp nhất — vật nhỏ/mảnh khó khớp</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6: Twin Data - scene overview -->
+  <section class="slide">
+    <div class="slide-inner single-fig">
+      <p class="eyebrow">Giai đoạn 8 — Twin Data · <code>OUTPUT_I</code></p>
+      <h2>Toàn cảnh nhà xưởng sau khi ghép lại</h2>
+      <img src="media/factory_scene_overview.png" alt="Factory scene overview">
+      <p class="cap">38 vật đã hoàn thiện, đặt đúng vị trí + hướng xoay đo được ở bước Alignment.</p>
+    </div>
+  </section>
+
+  <!-- 7: Full scene 4-views -->
+  <section class="slide">
+    <div class="slide-inner single-fig">
+      <p class="eyebrow">Giai đoạn 8 — Twin Data · <code>OUTPUT_I</code></p>
+      <h2>Scene nhìn từ 4 góc camera</h2>
+      <img src="media/factory_full_scene_render_4views.png" alt="Full factory scene 4 views">
+      <p class="cap"><code>factory_full_scene_render_4views.png</code> — render từ <code>full_factory_scene.glb</code>.</p>
+    </div>
+  </section>
+
+  <!-- 8: Photorealistic 4-views -->
+  <section class="slide">
+    <div class="slide-inner single-fig">
+      <p class="eyebrow">Giai đoạn 8 — Twin Data · <code>OUTPUT_I</code></p>
+      <h2>Bản render photorealistic đã texture</h2>
+      <img src="media/factory_photorealistic_textured_4views.png" alt="Photorealistic textured scene 4 views">
+      <p class="cap"><code>factory_photorealistic_textured_4views.png</code> — <code>factory_photorealistic_textured_scene.glb</code>.</p>
+    </div>
+  </section>
+
+  <!-- 9: Key objects closeup -->
+  <section class="slide">
+    <div class="slide-inner single-fig">
+      <p class="eyebrow">Giai đoạn 8 — Twin Data · <code>OUTPUT_I</code></p>
+      <h2>Cận cảnh các vật chính đã texture</h2>
+      <img src="media/key_objects_textured_closeup.png" alt="Key objects textured closeup">
+      <p class="cap"><code>key_objects_textured_closeup.png</code></p>
+    </div>
+  </section>
+
+  <!-- 10: Robotics manipulation -->
+  <section class="slide">
+    <div class="slide-inner">
+      <p class="eyebrow">Giai đoạn 8 — Twin Data · <code>OUTPUT_I</code> / robotics_manipulation</p>
+      <h2>Phân loại vật thể cho robot: nhặt được hay vật cản</h2>
+      <div class="media-row" style="grid-template-columns: 1.3fr 1fr;">
+        <img src="media/robotics_manipulation_layout.png" alt="Robotics manipulation layout" style="max-height:46vh; object-fit:contain;">
+        <div>
+          <table class="data">
+            <tr><th>Nhóm</th><th class="num">Số vật</th></tr>
+            <tr><td><span class="tag green">DYNAMIC_LIFTABLE</span></td><td class="num">20</td></tr>
+            <tr><td><span class="tag gray">STATIC_OBSTACLE</span></td><td class="num">15</td></tr>
+            <tr><td><span class="tag red">REJECTED (dẹt bất thường)</span></td><td class="num">3</td></tr>
+          </table>
+          <p class="lede" style="margin-top:10px; font-size:12.5px;">Mỗi vật liftable kèm khối lượng ước tính (kg), kích thước 3 chiều (mm), thể tích — xuất thẳng sang <code>robotics_manipulation_scene.xml</code> cho MuJoCo.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11: Use cases -->
+  <section class="slide">
+    <div class="slide-inner">
+      <p class="eyebrow">Sau Stage 8 — Twin Data phục vụ nhiều hệ thống downstream</p>
+      <h2>5 nhóm mục đích sử dụng</h2>
+      <p class="lede">Cùng một bộ Twin Data từ xưởng này, không cần chạy lại pipeline,
+        cấp dữ liệu cho 5 hướng khác nhau:</p>
+      <div class="usecase-grid">
+        <div class="usecase">
+          <span class="n">01</span>
+          <h3>Simulation &amp; Evaluation</h3>
+          <p>Tạo environment mô phỏng, kiểm tra collision, test hành vi, chạy nhiều scenario mà không cần dựng tay.</p>
+          <span class="link">Dùng ngay: <code>factory_scene.mjcf</code>, <code>factory_merged_mesh.glb</code></span>
+        </div>
+        <div class="usecase">
+          <span class="n">02</span>
+          <h3>Planning &amp; Navigation</h3>
+          <p>Geometry + semantics + obstacle → localization, path planning, free-space analysis, tránh vật cản.</p>
+          <span class="link">Dùng ngay: 15 vật <code>STATIC_OBSTACLE</code> ở slide trước</span>
+        </div>
+        <div class="usecase">
+          <span class="n">03</span>
+          <h3>Interaction &amp; Manipulation</h3>
+          <p>Object-level Twin Data cho affordance prediction, grasp planning, pick-and-place, mở/kéo ngăn.</p>
+          <span class="link">Dùng ngay: 20 vật <code>DYNAMIC_LIFTABLE</code> kèm khối lượng, kích thước</span>
+        </div>
+        <div class="usecase">
+          <span class="n">04</span>
+          <h3>Robot Training / Sim-to-Real</h3>
+          <p>Sinh RGB/depth/mask, nhiều camera viewpoint, domain randomization, huấn luyện locomotion &amp; manipulation.</p>
+          <span class="link">Dùng ngay: <code>robotics_manipulation_scene.xml</code> nạp thẳng MuJoCo</span>
+        </div>
+        <div class="usecase" style="grid-column: 1 / -1;">
+          <span class="n">05</span>
+          <h3>Environment Analysis &amp; Understanding</h3>
+          <p>Không cần robot vẫn dùng được: đếm/thống kê object, đo bố cục không gian, semantic search, spatial query, change detection.</p>
+          <span class="link">Dùng ngay: 38 vật đã phân loại theo semantic_class trong <code>scene_manifest.json</code></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12: Use-case demo (screen capture) -->
+  <section class="slide">
+    <div class="slide-inner single-fig">
+      <p class="eyebrow">Use case — thao tác trực tiếp trên scene</p>
+      <h2>Demo: dùng object package để dàn cảnh lại</h2>
+      <video src="media/usecase_screen_capture_30s.mp4"
+             autoplay muted loop playsinline controls preload="auto"
+             style="max-height:58vh; width:auto; margin:0 auto; border-radius:10px; border:1px solid var(--line);"></video>
+      <p class="cap">Ghi màn hình 30 giây đầu — thao tác thật trên scene đã dựng, không dựng lại cho video.</p>
+    </div>
+  </section>
+
+  <!-- 13: Closing -->
+  <section class="slide">
+    <div class="slide-inner">
+      <p class="eyebrow">Kết</p>
+      <h1>1 video quay tay → 1 nhà xưởng đầy đủ, 38 vật, sẵn sàng cho robot</h1>
+      <p class="lede">Từ mesh thô, qua coverage analysis, Hunyuan completion, alignment
+        có kiểm chứng IoU, đến scene robot phân loại được vật nhặt/vật cản — tất cả tự
+        động từ cùng một pipeline đã dùng cho demo 3 vật trước đó.</p>
+      <div class="close-links">
+        <a href="../index.html">← Báo cáo chính</a>
+        <a href="../viewer/index.html">Scene tương tác (demo cũ) →</a>
+        <a href="../objects3d/index.html">3 vật hoàn thiện →</a>
+        <a href="media/full_factory_contact_sheet.html" target="_blank">Contact sheet 38 vật →</a>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div class="navbar">
+  <button class="nav-btn" id="prevBtn" aria-label="Slide trước">← Trước</button>
+  <div class="dots" id="dots"></div>
+  <span class="counter" id="counter">1 / 13</span>
+  <button class="nav-btn" id="nextBtn" aria-label="Slide sau">Sau →</button>
+</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const dotsEl = document.getElementById('dots');
+  const counterEl = document.getElementById('counter');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  let idx = 0;
+
+  slides.forEach((_, i) => {
+    const b = document.createElement('button');
+    b.className = 'dot' + (i === 0 ? ' active' : '');
+    b.setAttribute('aria-label', 'Đi tới slide ' + (i + 1));
+    b.addEventListener('click', () => go(i));
+    dotsEl.appendChild(b);
+  });
+  const dots = Array.from(dotsEl.children);
+
+  function render() {
+    slides.forEach((s, i) => s.classList.toggle('active', i === idx));
+    dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+    counterEl.textContent = (idx + 1) + ' / ' + slides.length;
+    prevBtn.disabled = idx === 0;
+    nextBtn.disabled = idx === slides.length - 1;
+    slides[idx].scrollTop = 0;
+    slides.forEach((s, i) => {
+      s.querySelectorAll('video').forEach((v) => {
+        if (i === idx) { v.currentTime = 0; v.play().catch(() => {}); }
+        else { v.pause(); }
+      });
+    });
+  }
+  function go(i) { idx = Math.max(0, Math.min(slides.length - 1, i)); render(); }
+
+  prevBtn.addEventListener('click', () => go(idx - 1));
+  nextBtn.addEventListener('click', () => go(idx + 1));
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ') go(idx + 1);
+    if (e.key === 'ArrowLeft') go(idx - 1);
+  });
+
+  render();
+</script>
+
+</body>
+</html>

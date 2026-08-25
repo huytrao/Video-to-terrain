@@ -3,6 +3,9 @@
 .env.*
 !.env.example
 .backup/
+# Local AI-assistant notes, not part of the deliverable
+context.txt
+CONTEXT_CODEX.md
 # holds a plaintext Kaggle API key
 kaggle_upload_example.py
 **/kaggle.json
@@ -94,6 +97,16 @@ source-reference/
 !/output/REPORT/media/
 /output/REPORT/media/*
 !/output/REPORT/media/fig_*.png
+!/output/REPORT/media/pipeline_overview.png
+!/output/REPORT/media/comparison_xingying_ct22_stairs.mp4
+!/output/REPORT/media/case_factory_before.png
+!/output/REPORT/media/case_factory_after.png
+!/output/REPORT/media/camera_poses_metric.png
+!/output/REPORT/media/obj_0211_shelf_preview.png
+!/output/REPORT/media/obj_0213_ladder_preview.png
+!/output/REPORT/media/heading_270.mp4
+!/output/REPORT/media/usecase_move_around.mp4
+!/output/REPORT/media/rgbd_capture_gap.mp4
 # Demo-surface pages: the interactive physics viewer (old OUTPUT_K scene),
 # the Hunyuan3D finished-objects gallery, and the recording script. Pages and
 # metadata are tracked; the GLBs/videos they load stay local + in the handover
@@ -108,3 +121,9 @@ source-reference/
 !/output/REPORT/scene_old/carve_manifest.json
 !/output/REPORT/KICH_BAN_QUAY.md
 !/output/REPORT/HUONG_DAN_XEM.md
+
+# Full Factory Scene slideshow (38-object run): page + evidence media, same
+# tracked-page / local-media split as the rest of REPORT.
+!/output/REPORT/full_factory/
+/output/REPORT/full_factory/*
+!/output/REPORT/full_factory/index.html

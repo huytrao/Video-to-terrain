@@ -1,504 +1,619 @@
-<title>One Video, One Dataset</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Video điện thoại → Twin Digital Data. Sprint 3 · gần 2 tuần.">
+<title>Video điện thoại → Twin Digital Data</title>
 <style>
-:root{
-  --ink:#14171c; --body:#3a4049; --dim:#737a86; --line:#e3e0d9; --rule:#d9d5cc;
-  --bg:#fbf9f5; --card:#ffffff; --accent:#1c6448; --accent-soft:#e8f2ed;
-  --warn:#8f5512; --warn-soft:#faf1e4;
-}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --ink:#f2f0ec; --body:#c5c9d1; --dim:#8a8f9b; --line:#282b32; --rule:#282b32;
-  --bg:#111318; --card:#171a20; --accent:#63c99a; --accent-soft:#16281f;
-  --warn:#d9a05c; --warn-soft:#241c11;
-}}
-:root[data-theme="dark"]{
-  --ink:#f2f0ec; --body:#c5c9d1; --dim:#8a8f9b; --line:#282b32; --rule:#282b32;
-  --bg:#111318; --card:#171a20; --accent:#63c99a; --accent-soft:#16281f;
-  --warn:#d9a05c; --warn-soft:#241c11;
-}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--body);
-  font:400 16px/1.68 Inter,ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
-.wrap{max-width:900px;margin:0 auto;padding:0 26px}
-h1,h2,h3{color:var(--ink);text-wrap:balance;margin:0;font-family:Newsreader,Georgia,serif}
-code,.m{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:.87em}
+  :root {
+    --black: #1d1d1f; --gray: #6e6e73; --line: #d2d2d7; --light: #f5f5f7;
+    --blue: #06c; --green: #16834d; --orange: #ad5a00; --red: #b42318;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; color: var(--black); background: #fff;
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  img, video { display: block; max-width: 100%; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
 
-header{padding:80px 0 46px;border-bottom:1px solid var(--rule)}
-.eyebrow{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.15em;
-  text-transform:uppercase;color:var(--accent);margin:0 0 16px}
-h1{font-size:clamp(36px,6vw,58px);font-weight:500;letter-spacing:-.02em;line-height:1.06}
-.lede{font-size:19.5px;line-height:1.6;margin:20px 0 0;max-width:62ch}
-.lede b{color:var(--ink);font-weight:600}
+  .topbar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 20px; background: rgba(255,255,255,.92);
+    border-bottom: 1px solid var(--line); backdrop-filter: saturate(180%) blur(18px);
+  }
+  .topbar .wordmark { font-size: 11px; font-weight: 700; letter-spacing: .1em; color: var(--gray); text-transform: uppercase; }
+  .topbar .badge { font-size: 11px; font-weight: 600; color: var(--gray); }
 
-section{padding:54px 0;border-bottom:1px solid var(--rule)}
-section:last-of-type{border-bottom:0}
-h2{font-size:29px;font-weight:500;letter-spacing:-.012em;margin-bottom:9px}
-h3{font-size:17px;font-weight:600;font-family:Inter,sans-serif}
-.sub{color:var(--dim);font-size:15.5px;margin:0 0 26px;max-width:64ch}
+  .deck { position: absolute; top: 0; bottom: 0; left: 0; right: 0; }
+  .slide {
+    display: none; position: absolute; inset: 0;
+    padding: 64px 6vw 84px; overflow-y: auto;
+    flex-direction: column; align-items: center; justify-content: flex-start;
+    gap: 22px;
+  }
+  .slide.active { display: flex; }
+  .slide-inner { width: 100%; max-width: 1180px; margin: 0 auto; }
 
-.io{display:grid;grid-template-columns:1fr auto 1fr;gap:20px;align-items:center;margin:30px 0 0}
-.io-box{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:19px 21px}
-.io-box h3{margin:0 0 9px;font-size:15px}
-.io-box ul{margin:0;padding-left:17px;font-size:14.5px;line-height:1.85}
-.io-box li::marker{color:var(--accent)}
-.arrow{font-size:26px;color:var(--accent);text-align:center}
-@media(max-width:680px){.io{grid-template-columns:1fr}.arrow{transform:rotate(90deg)}}
+  .eyebrow { margin: 0 0 8px; color: var(--gray); font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
+  h1 { margin: 0; font-size: clamp(34px, 5vw, 58px); font-weight: 600; letter-spacing: -.055em; line-height: 1.05; text-align: center; }
+  h2 { margin: 0 0 4px; font-size: clamp(24px, 3.4vw, 36px); font-weight: 600; letter-spacing: -.045em; line-height: 1.1; }
+  .lede { max-width: 760px; color: var(--gray); font-size: 16px; line-height: 1.5; margin: 10px auto 0; text-align: center; }
+  .lede strong { color: var(--black); }
 
-.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:13px;margin-top:26px}
-.k{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 17px}
-.k b{display:block;font-family:Newsreader,serif;font-size:29px;font-weight:500;
-  color:var(--ink);letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1}
-.k span{display:block;font-size:12.5px;color:var(--dim);margin-top:5px;line-height:1.4}
+  .sprint-badge {
+    display: inline-block; margin: 0 auto 18px; padding: 6px 14px; border-radius: 999px;
+    background: var(--light); color: var(--black); font-size: 12px; font-weight: 700;
+    letter-spacing: .04em;
+  }
+  .user-story {
+    max-width: 820px; margin: 26px auto 0; padding: 18px 22px; border-left: 3px solid var(--black);
+    background: var(--light); border-radius: 0 10px 10px 0; text-align: left;
+  }
+  .user-story p { margin: 0; color: var(--black); font-size: 15.5px; line-height: 1.55; }
+  .user-story b { color: var(--gray); display: block; margin-bottom: 6px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 
-.tw{overflow-x:auto;margin-top:16px}
-table{width:100%;border-collapse:collapse;font-size:14.8px;min-width:520px}
-th,td{text-align:left;padding:11px 13px;border-bottom:1px solid var(--line);vertical-align:top}
-th{font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);font-weight:600}
-td.n{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
-tr.hi td{background:var(--accent-soft)}
-.good{color:var(--accent);font-weight:600}
+  /* Pipeline: small thumbnail + expand button, detail lives in the stage carousel below */
+  .pipeline-row { display: flex; align-items: center; gap: 14px; width: 100%; margin-top: 6px; }
+  .pipeline-fig-small { flex-shrink: 0; display: flex; }
+  .pipeline-fig-small img {
+    max-height: 20vh; width: auto; object-fit: contain; cursor: zoom-in;
+    border: 1px solid var(--line); border-radius: 8px;
+  }
+  .pipeline-fig-small:fullscreen { width: 100vw; height: 100vh; background: #fff; align-items: center; justify-content: center; }
+  .pipeline-fig-small:fullscreen img { max-height: 100vh; max-width: 100vw; }
+  .pipeline-row-text { flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; }
+  .pipeline-fullscreen {
+    flex-shrink: 0; padding: 8px 14px; border: 1px solid var(--line); border-radius: 7px;
+    color: var(--black); background: #fff; font: inherit; font-size: 11px; font-weight: 600; cursor: pointer;
+  }
+  .pipeline-fullscreen:hover { background: var(--light); }
 
-figure{margin:0 0 20px}
-video,figure img{width:100%;display:block;border-radius:12px;border:1px solid var(--line);background:#0c0d10}
-figcaption{font-size:13.5px;color:var(--dim);margin-top:9px;line-height:1.5}
-figcaption b{color:var(--ink);font-weight:600}
-.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:20px}
+  .difference-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-top: 8px; width: 100%; }
+  .difference { padding-top: 11px; border-top: 2px solid var(--black); }
+  .difference strong { display: block; margin-bottom: 4px; font-size: 13px; font-weight: 600; }
+  .difference p { margin: 0; color: var(--gray); font-size: 12px; line-height: 1.4; }
 
-.card{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--accent);
-  border-radius:0 12px 12px 0;padding:17px 20px;margin:15px 0}
-.card h3{margin:0 0 6px}
-.card p{margin:0 0 8px;font-size:14.8px}
-.card p:last-child{margin-bottom:0}
-.card .n{font-family:'JetBrains Mono',monospace;color:var(--ink);font-weight:500}
-.card.warn{border-left-color:var(--warn);background:var(--warn-soft)}
-.card.warn h3{color:var(--warn)}
+  .output-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; margin-top: 10px; width: 100%; }
+  .output-card { padding: 6px; border: 1px solid var(--line); border-radius: 8px; min-height: 96px; }
+  .output-thumb { width: 100%; height: 40px; margin-bottom: 4px; object-fit: cover; border-radius: 5px; background: var(--light); }
+  .output-thumb.contain { object-fit: contain; }
+  .output-card.object-output { min-height: 104px; }
+  .object-output .output-thumb { height: 48px; object-fit: contain; background: #1d2028; }
+  .output-card h3 { margin: 0 0 2px; font-size: 11px; font-weight: 600; line-height: 1.2; }
+  .output-card p { margin: 0 0 3px; color: var(--gray); font-size: 9.5px; line-height: 1.25; }
+  .output-card .output-meta { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+  .output-card a { font-size: 9px; }
+  .output-status { color: var(--gray); font-size: 8px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+  .output-status.ready { color: var(--green); }
+  .output-status.partial { color: var(--orange); }
 
-.pill{display:inline-block;font-family:'JetBrains Mono',monospace;font-size:11px;
-  padding:2px 8px;border-radius:20px;background:var(--accent-soft);color:var(--accent);
-  margin-bottom:7px}
+  .comparison-video { margin: 14px auto 0; padding: 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--light); width: 100%; max-width: 820px; }
+  .comparison-video video { width: 100%; max-height: 46vh; object-fit: contain; background: #101319; border-radius: 5px; }
+  .comparison-video figcaption { padding: 7px 2px 0; color: var(--gray); font-size: 12px; }
+  .comparison-points { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 18px; width: 100%; }
+  .comparison-point { padding-top: 11px; border-top: 1px solid var(--black); }
+  .comparison-point strong { display: block; margin-bottom: 5px; font-size: 13px; font-weight: 600; }
+  .comparison-point p { margin: 0; color: var(--gray); font-size: 12.5px; line-height: 1.45; }
 
-.cta{display:inline-block;background:var(--accent);color:var(--bg);text-decoration:none;
-  padding:12px 22px;border-radius:9px;font-weight:600;font-size:15px}
-footer{padding:36px 0 70px;color:var(--dim);font-size:13.5px;line-height:1.7}
+  .before-after { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 8px; width: 100%; }
+  .before-after figure { margin: 0; padding: 7px; border: 1px solid var(--line); border-radius: 9px; background: var(--light); }
+  .before-after img { width: 100%; max-height: 38vh; object-fit: contain; border-radius: 5px; background: #171a20; }
+  .before-after figcaption { padding: 6px 2px 0; color: var(--gray); font-size: 11.5px; }
+  .before-after figcaption strong { color: var(--black); font-weight: 600; }
+  .value-points { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 18px; width: 100%; }
+  .value-point { padding-top: 10px; border-top: 1px solid var(--black); }
+  .value-point strong { display: block; margin-bottom: 4px; font-size: 12.5px; font-weight: 600; }
+  .value-point p { margin: 0; color: var(--gray); font-size: 11.5px; line-height: 1.4; }
+
+  .source-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; margin-top: 8px; width: 100%; }
+  .source-column h3 { margin: 0 0 8px; font-size: 13px; font-weight: 600; }
+  .source-list { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line); }
+  .source-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .source-list strong { display: block; color: var(--black); font: 11px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
+  .source-list span { display: block; margin-top: 2px; color: var(--gray); font-size: 10.5px; line-height: 1.3; }
+  .source-list a { align-self: center; font-size: 10.5px; white-space: nowrap; }
+
+  /* Details: nested 8-stage mini-carousel, Apple-simple density */
+  .stage-nav { display: flex; align-items: center; gap: 6px; margin: 4px 0 20px; flex-wrap: wrap; justify-content: center; }
+  .stage-nav button { min-width: 30px; height: 28px; padding: 0 7px; border: 1px solid var(--line); border-radius: 6px; color: var(--gray); background: #fff; font: inherit; font-size: 11px; cursor: pointer; }
+  .stage-nav button:hover, .stage-nav button.active { color: #fff; border-color: var(--black); background: var(--black); font-weight: 600; }
+  .stage-nav .stage-arrow { font-size: 14px; font-weight: 700; }
+  .stage-counter { margin-left: 4px; color: var(--gray); font-size: 11px; }
+
+  .stage-panel { display: none; width: 100%; }
+  .stage-panel.active { display: block; }
+  .stage-head { text-align: center; margin-bottom: 6px; }
+  .stage-head .stage-number { color: #a1a1a6; font-size: 13px; font-weight: 700; }
+  .stage-head h2 { text-align: center; }
+  .stage-desc { max-width: 680px; margin: 6px auto 0; color: var(--gray); font-size: 14.5px; text-align: center; }
+  .stage-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; margin-top: 20px; align-items: start; }
+  .stage-media { display: grid; gap: 10px; }
+  .stage-media.one { grid-template-columns: 1fr; }
+  .stage-media.two { grid-template-columns: 1fr 1fr; }
+  .stage-media img, .stage-media video { width: 100%; max-height: 20vh; object-fit: contain; border: 1px solid var(--line); border-radius: 9px; background: var(--light); }
+  .stage-facts { margin: 0; padding-left: 18px; color: var(--gray); font-size: 13.5px; }
+  .stage-facts li { margin: 6px 0; }
+  .stage-facts b { color: var(--black); font-weight: 600; }
+  .stage-link { display: inline-block; margin-top: 10px; font-size: 12.5px; }
+
+  .close-links { display: flex; gap: 16px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
+  .close-links a { font-size: 13px; font-weight: 600; padding: 8px 14px; border: 1px solid var(--line); border-radius: 8px; color: var(--black); }
+  .close-links a:hover { background: var(--light); text-decoration: none; }
+
+  .navbar {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: center; gap: 18px;
+    padding: 14px 20px; background: rgba(255,255,255,.94);
+    border-top: 1px solid var(--line); backdrop-filter: saturate(180%) blur(18px);
+  }
+  .nav-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 16px; border: 1px solid var(--line); border-radius: 999px;
+    background: #fff; color: var(--black); font: inherit; font-size: 13px; font-weight: 600;
+    cursor: pointer;
+  }
+  .nav-btn:hover:not(:disabled) { background: var(--light); }
+  .nav-btn:disabled { opacity: .35; cursor: default; }
+  .dots { display: flex; gap: 6px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--line); cursor: pointer; border: 0; padding: 0; }
+  .dot.active { background: var(--black); width: 16px; border-radius: 3px; }
+  .counter { min-width: 52px; text-align: center; font-size: 12px; color: var(--gray); font-variant-numeric: tabular-nums; }
+
+  @media (max-width: 900px) {
+    .stage-body { grid-template-columns: 1fr; }
+    .output-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .difference-strip { grid-template-columns: repeat(2, 1fr); }
+    .value-points { grid-template-columns: repeat(2, 1fr); }
+    .source-columns { grid-template-columns: 1fr; }
+  }
 </style>
+</head>
+<body>
 
-<div class="wrap">
-<header>
-  <p class="eyebrow">Kết quả nghiên cứu · Video-to-3D</p>
-  <h1>Một đoạn video vào. Toàn bộ dữ liệu 3D của căn phòng đi ra.</h1>
-  <p class="lede">Câu hỏi tôi đặt ra: <b>một đoạn video quay tay chứa được bao nhiêu thông
-  tin 3D, nếu ta khai thác đến cùng?</b> Câu trả lời là bảy lớp dữ liệu — hình học, ngoại quan,
-  ngữ nghĩa, vật thể tách rời — không cần LiDAR, không dựng tay, và tất cả đều kiểm chứng được.</p>
-</header>
-
-<section>
-  <h2>Vào một thứ, ra một kho</h2>
-  <p class="sub">Đây là điểm cốt lõi: đầu vào là thứ ai cũng có, đầu ra là thứ thường
-  phải mua thiết bị hoặc thuê người dựng.</p>
-
-  <div class="io">
-    <div class="io-box">
-      <span class="pill">ĐẦU VÀO</span>
-      <h3>Một video quay tay</h3>
-      <ul>
-        <li>852 khung hình</li>
-        <li>Camera điện thoại</li>
-        <li>Không cảm biến độ sâu</li>
-        <li>Không đánh dấu, không hiệu chuẩn</li>
-      </ul>
-    </div>
-    <div class="arrow">→</div>
-    <div class="io-box">
-      <span class="pill">ĐẦU RA</span>
-      <h3>Bảy lớp dữ liệu</h3>
-      <ul>
-        <li>Bản đồ độ sâu từng khung</li>
-        <li>Đám mây điểm 3D</li>
-        <li>Gaussian splat (5,99 M)</li>
-        <li>Mesh có màu (20,6 M tam giác)</li>
-        <li>Mặt nạ ngữ nghĩa 2D</li>
-        <li>Hộp vật thể 3D + nhãn</li>
-        <li>46 vật thể tách rời</li>
-      </ul>
-    </div>
-  </div>
-</section>
-
-<section>
-  <h2>Đầu vào trông như thế nào</h2>
-  <p class="sub">Bốn khung lấy từ 852 khung của video. Không dàn dựng, không đèn, không
-  bảng hiệu chuẩn — đúng chất lượng của một lần cầm điện thoại đi quanh xưởng.</p>
-  <figure>
-    <img src="media/fig_input_frames.png" alt="Bốn khung hình lấy từ video đầu vào">
-    <figcaption>Ghi nhớ mấy chi tiết này để đối chiếu với mesh bên dưới: <b>máy hút bụi
-    xanh</b>, <b>cửa gỗ màu cam</b>, <b>dãy cửa sổ nhìn ra cây</b>, <b>sàn xanh lá</b>.</figcaption>
-  </figure>
-</section>
-
-<section>
-  <h2>Căn phòng dựng được</h2>
-  <p class="sub">Ba góc nhìn của cùng một mesh, dựng từ chính lần chạy này. Cửa sổ, máy móc,
-  tủ tường và đèn trần đều đọc được — màu lấy từ ảnh gốc, không tô lại.</p>
-  <figure>
-    <img src="media/fig_room_views.png" alt="Ba góc nhìn của căn phòng đã tái dựng">
-    <figcaption><b>20,6 triệu tam giác</b> từ 852 khung hình. Đối chiếu với ảnh đầu vào ở
-    trên: <b>cửa gỗ cam</b> ở hai đầu phòng, <b>dãy cửa sổ</b> và mảng cây xanh phía sau,
-    <b>sàn xanh lá</b>, đèn trần. Bên phải nhìn từ trên xuống cho thấy bố cục mặt bằng.</figcaption>
-  </figure>
-</section>
-
-<section>
-  <h2>Vật thể tách được</h2>
-  <p class="sub">Phần khó nhất, và cũng là phần tôi nói thẳng về chất lượng: quy trình tách
-  ra <b>46 khối</b>, trong đó <b>28 khối có hình dạng đặc</b> — số còn lại là mảnh vỏ bị bóc
-  khỏi tường, dùng được cho va chạm nhưng không phải đồ vật.</p>
-  <figure>
-    <img src="media/fig_objects.png" alt="Năm vật thể tách rời từ căn phòng">
-    <figcaption>Năm vật nhận ra được bằng mắt, mỗi cái là một mesh độc lập có màu và lưới
-    va chạm riêng. Tên do mô hình thị giác-ngôn ngữ gán, tôi giữ nguyên nhãn nó đưa ra.</figcaption>
-  </figure>
-</section>
-
-<section>
-  <h2>So với các cách làm khác</h2>
-  <p class="sub">Ba cách phổ biến để có một môi trường 3D cho robot. Bảng này để chỉ ra
-  cách của em <b>khác ở đâu</b> — không phải để nói nó tốt hơn ở mọi mặt, vì không phải vậy.</p>
-  <div class="tw">
-  <table>
-    <tr>
-      <th>Tiêu chí</th>
-      <th>Quét LiDAR</th>
-      <th>Dựng tay (Blender)</th>
-      <th>Cách này</th>
-    </tr>
-    <tr>
-      <td><b>Thiết bị</b></td>
-      <td>Máy quét chuyên dụng</td>
-      <td>Không cần</td>
-      <td class="good">Điện thoại</td>
-    </tr>
-    <tr>
-      <td><b>Công một cảnh</b></td>
-      <td>Nửa ngày quét + xử lý</td>
-      <td>Vài ngày tới một tuần</td>
-      <td class="good">Đi bộ 5 phút + 4 giờ máy chạy</td>
-    </tr>
-    <tr>
-      <td><b>Độ chính xác hình học</b></td>
-      <td class="good">Sai số mm, có đơn vị mét</td>
-      <td>Do người dựng quyết định</td>
-      <td>Tỉ lệ tương đối đúng, <b>chưa hiệu chuẩn mét</b></td>
-    </tr>
-    <tr>
-      <td><b>Ngoại quan</b></td>
-      <td>Thường phải chụp ảnh riêng</td>
-      <td>Phải vẽ vật liệu bằng tay</td>
-      <td class="good">Màu lấy thẳng từ video</td>
-    </tr>
-    <tr>
-      <td><b>Ngữ nghĩa</b></td>
-      <td>Phải gán nhãn thủ công</td>
-      <td>Có sẵn theo cách dựng</td>
-      <td class="good">Tự động, mô hình ngôn ngữ gán</td>
-    </tr>
-    <tr>
-      <td><b>Vật thể tách rời</b></td>
-      <td>Một khối liền, phải cắt tay</td>
-      <td class="good">Tách sẵn theo thiết kế</td>
-      <td>28/46 khối dùng được</td>
-    </tr>
-    <tr class="hi">
-      <td><b>Mở rộng số cảnh</b></td>
-      <td>Giới hạn bởi thiết bị</td>
-      <td>Giới hạn bởi người</td>
-      <td class="good">Giới hạn bởi số chỗ quay được</td>
-    </tr>
-  </table>
-  </div>
-  <div class="card">
-    <h3>Điểm khác biệt thật sự nằm ở hàng cuối</h3>
-    <p>LiDAR chính xác hơn về hình học, dựng tay sạch hơn về vật thể — em không tranh hai
-    điểm đó. Nhưng cả hai đều <b>không mở rộng được theo số lượng</b>: một cái giới hạn bởi
-    thiết bị, một cái giới hạn bởi giờ công.</p>
-    <p>Cách này đánh đổi độ chính xác tuyệt đối để lấy <b>chi phí biên gần bằng không</b>.
-    Với bài toán huấn luyện robot — nơi cần nhiều môi trường đa dạng hơn là vài môi trường
-    hoàn hảo — em cho rằng đó là đánh đổi đúng hướng.</p>
-  </div>
-</section>
-
-<section>
-  <h2>Vì sao tôi theo hướng này</h2>
-  <p class="sub">Nút thắt của sim-to-real không nằm ở thuật toán mà ở số lượng môi trường
-  huấn luyện. Mà môi trường thì đắt — cả tiền thiết bị lẫn công dựng.</p>
-
-  <div class="card">
-    <h3>Chi phí biên của một môi trường mới</h3>
-    <p>Nếu quy trình này đứng vững, thêm một cảnh chỉ tốn <b>một lần đi bộ cầm điện thoại</b>.
-    So với một buổi chụp LiDAR hay một tuần dựng mô hình, đó là khác biệt về bậc độ lớn —
-    và nó đổi câu hỏi từ "ngân sách cho được mấy cảnh" sang "quay được mấy chỗ".</p>
-  </div>
-
-  <div class="card">
-    <h3>Tách được vật thể mới là chỗ khó</h3>
-    <p>Quét ra một lớp vỏ liền thì dễ, nhưng robot không cầm nắm được gì trong đó — chỉ
-    đi lại được. Ở đây <span class="n">46</span> vật là mesh độc lập, có hộp bao, nhãn và
-    lưới va chạm riêng. Đó là ranh giới giữa bài toán navigation và bài toán manipulation.</p>
-  </div>
-
-  <div class="card">
-    <h3>Tái lập được thì mới gọi là kết quả</h3>
-    <p>Tám giai đoạn, một lệnh, không can thiệp tay — kể cả mô hình thị giác-ngôn ngữ cũng
-    chạy nội bộ thay vì gọi API đám mây. Tôi giữ ràng buộc này vì một quy trình phụ thuộc
-    dịch vụ bên ngoài thì không kiểm chứng lại được sau sáu tháng.</p>
-  </div>
-</section>
-
-<section>
-  <h2>Đọc kết quả</h2>
-  <p class="sub">Bốn giai đoạn chính. Mỗi đoạn phim là dữ liệu thật của lần chạy này.</p>
-  <div class="two">
-    <figure>
-      <video src="media/01_dau_vao_video.mp4" controls muted loop playsinline preload="metadata"></video>
-      <figcaption><b>Đầu vào.</b> Video quay tay quanh xưởng. Đây là toàn bộ thứ hệ thống nhận được.</figcaption>
-    </figure>
-    <figure>
-      <video src="media/02_do_sau_da3.mp4" controls muted loop playsinline preload="metadata"></video>
-      <figcaption><b>Độ sâu đơn ảnh.</b> Mỗi khung hình được suy ra khoảng cách tới từng bề mặt — không cảm biến.</figcaption>
-    </figure>
-    <figure>
-      <video src="media/04_mesh_3d.mp4" controls muted loop playsinline preload="metadata"></video>
-      <figcaption><b>Mesh có màu.</b> 20,6 triệu tam giác, màu lấy từ chính ảnh gốc.</figcaption>
-    </figure>
-    <figure>
-      <video src="media/05_cat_ngang_phong.mp4" controls muted loop playsinline preload="metadata"></video>
-      <figcaption><b>Cắt ngang.</b> Bổ đôi để xác nhận hình học bên trong đúng, không rỗng.</figcaption>
-    </figure>
-  </div>
-</section>
-
-<section>
-  <h2>So sánh: trước và sau khi can thiệp</h2>
-  <p class="sub">Mã nguồn gốc chạy được, nhưng cho kết quả sai ở những chỗ không phép đo
-  nào bắt được. Bảng này là phần đóng góp, đo trên cùng một cảnh.</p>
-  <div class="tw">
-  <table>
-    <tr>
-      <th>Hạng mục</th><th>Trước</th><th>Sau</th><th>Ý nghĩa</th>
-    </tr>
-    <tr class="hi">
-      <td><b>Chỉ số chất lượng</b></td>
-      <td class="n">25,08<br><span style="color:var(--dim);font-size:12px">trên ảnh đã học</span></td>
-      <td class="n good">24,17<br><span style="color:var(--dim);font-size:12px">trên 106 ảnh giấu</span></td>
-      <td>Con số cũ không đo khả năng tổng quát hoá. Con số mới thấp hơn nhưng <b>có thật</b>.</td>
-    </tr>
-    <tr>
-      <td>Vật thể được giữ lại</td>
-      <td class="n">52</td>
-      <td class="n good">95</td>
-      <td>43 vật vốn bị loại âm thầm vì một dịch vụ kiểm chứng không tồn tại.</td>
-    </tr>
-    <tr>
-      <td>Mesh</td>
-      <td class="n">15,1 M tam giác<br>1 khối liền</td>
-      <td class="n good">20,6 M tam giác<br>200 khối rời</td>
-      <td>Tham số mặc định xoá mọi vật không dính sàn và bỏ 9,5% dữ liệu độ sâu.</td>
-    </tr>
-    <tr>
-      <td>Khung hình gán nhãn</td>
-      <td class="n">100</td>
-      <td class="n good">919</td>
-      <td>Phủ toàn bộ video thay vì lấy mẫu thưa.</td>
-    </tr>
-    <tr>
-      <td>Nhãn bịa đặt</td>
-      <td class="n">"cây" ở 91% khung</td>
-      <td class="n good">12%, và có thật</td>
-      <td>Sau khi sửa, kiểm chứng lại: cây nhìn thấy qua cửa sổ.</td>
-    </tr>
-    <tr>
-      <td>Kiểm định tự động</td>
-      <td class="n">chưa có</td>
-      <td class="n good">5/5 đạt</td>
-      <td>Chạy sau mỗi lần dựng, và nó từng báo trượt — đúng.</td>
-    </tr>
-  </table>
-  </div>
-</section>
-
-<section>
-  <h2>Bốn lỗi im lặng</h2>
-  <p class="sub">Loại lỗi khó nhất không phải lỗi làm chương trình dừng — mà loại vẫn chạy
-  trơn tru và trả về con số trông hợp lý. Cả bốn mục dưới đây đều thuộc loại đó, và mỗi mục
-  chỉ lộ ra khi tôi dựng thêm một phép đo mà quy trình gốc không có.</p>
-
-  <figure>
-    <img src="media/fig_findings.png" alt="Hai biểu đồ: đường cong chất lượng và tỉ lệ nhãn bịa">
-    <figcaption><b>Trái:</b> khoảng cách giữa hai đường là phần mô hình học thuộc chứ không
-    tổng quát hoá được — chỉ nhìn thấy khi có tập giữ riêng. <b>Phải:</b> chữ ký của nhãn bịa,
-    và kết quả sau khi sửa.</figcaption>
-  </figure>
-
-  <div class="card">
-    <h3>Chỉ số chất lượng đo trên chính đề bài</h3>
-    <p>Điều làm tôi nghi ngờ: cấu hình lưu cùng mô hình ghi <span class="n">eval=False</span>,
-    nghĩa là tập kiểm thử đã bị trộn vào tập huấn luyện. Con số 25,08 khi đó chỉ nói mô hình
-    <i>thuộc bài</i> đến đâu, không nói nó <i>tổng quát hoá</i> được gì.</p>
-    <p>Tôi huấn luyện lại, giữ riêng <span class="n">106</span> ảnh mà mô hình không hề thấy
-    trong suốt <span class="n">4 giờ 17 phút</span>. Điểm thật: <span class="n">24,17</span> —
-    thấp hơn, nhưng là con số dùng được.</p>
-    <p>Thu hoạch ngoài dự tính: có tập giữ riêng thì mới đọc được đường cong hội tụ. Sau
-    <span class="n">70.000</span> vòng, chất lượng chỉ nhích <span class="n">+0,12</span>
-    mỗi 10.000 vòng. Cắt ở mốc đó tiết kiệm <b>1 giờ 20 phút GPU mỗi lần chạy</b> mà mất chưa
-    tới 0,3 điểm — thông tin mà lần chạy cũ về nguyên tắc không thể cho biết.</p>
-  </div>
-
-  <div class="card">
-    <h3>Một nửa vật thể bị loại mà không ai biết</h3>
-    <p>Đọc mã bước dựng hộp 3D, tôi thấy nó phân ba ngưỡng: nhận thẳng nếu độ tin cậy ≥ 0,9,
-    loại nếu < 0,75, và <b>hỏi lại một mô hình thị giác-ngôn ngữ</b> cho khoảng giữa. Nhưng
-    lệnh gọi đó trỏ tới một máy chủ không tồn tại trên máy chạy. Yêu cầu thất bại, hàm trả về
-    "không đạt", và mọi vật trong khoảng giữa biến mất — không lỗi, không cảnh báo, không dòng log.</p>
-    <p>Đo phân bố điểm tin cậy mới thấy quy mô: khoảng 0,75–0,90 chứa <span class="n">530</span>
-    trên tổng 1.507 mặt nạ. Tôi dựng một dịch vụ tương thích chạy nội bộ bằng chính mô hình đã
-    tải sẵn trên máy. <span class="n">43</span> vật thể được khôi phục sau khi gom cụm 3D.</p>
-  </div>
-
-  <div class="card">
-    <h3>Mô hình ngôn ngữ tự bịa ra vật không tồn tại</h3>
-    <p>Khi xử lý cả 852 khung hình, danh sách nhãn tích luỹ dần và mô hình bắt đầu coi nó là
-    danh sách phải tìm cho đủ: <span class="n">cây</span> xuất hiện ở <span class="n">91%</span>
-    khung hình, <span class="n">máy cưa vòng</span> ở <span class="n">77%</span> — trong một
-    xưởng kín không có.</p>
-    <p>Cách tôi phân biệt bịa với thật: một vật có thật không thể xuất hiện ở ba phần tư số
-    khung của một lượt đi bộ. Vẽ biểu đồ "nhãn xuất hiện lần đầu ở khung nào, sau đó bám dai
-    bao lâu" thì chữ ký hiện rõ — <span class="n">cây</span> vào từ khung 426 rồi bám 91% mọi
-    khung sau đó.</p>
-    <p>Tôi giới hạn cửa sổ nhãn gợi ý và viết lại lời nhắc. Sau khi sửa, <span class="n">cây</span>
-    còn <span class="n">12%</span>. Nhưng thay vì mừng, tôi hỏi lại mô hình về đúng hai khung đó —
-    nó trả lời <i>"ảnh chụp trong nhà; qua cửa sổ thấy cây, xe đỗ và trời mây"</i>. Lần này
-    <b>đúng là có thật</b>, và tôi giữ nguyên.</p>
-  </div>
-
-  <div class="card">
-    <h3>Ba giai đoạn thiếu hẳn khỏi quy trình</h3>
-    <p>Bước dựng mesh nhận tham số suy từ chính cảnh — nhưng chỉ trên giấy: mã điều phối
-    truyền tham số cho bước huấn luyện và quên bước mesh, nên nó lặng lẽ dùng hằng số mặc định.
-    Đó là hằng số hiệu chỉnh cho phòng ngủ ScanNet++, và cảnh này là một xưởng cơ khí.</p>
-    <p>Hai hệ quả đo được: giới hạn độ sâu 4,0 <b>xoá 9,5% dữ liệu đáng tin</b> của cảnh này,
-    và tham số giữ-một-thành-phần <b>xoá mọi vật đứng rời không dính sàn</b> — đúng những vật
-    mà bài toán thao tác cần. Tôi cũng phát hiện quy trình thiếu hẳn bước dựng hộp 3D và bước
-    tách vỏ phòng: bước sau đó đòi dữ liệu mà không bước nào sinh ra.</p>
-    <p>Sau khi nối đủ: mesh từ 15,1 lên <span class="n">20,6 triệu</span> tam giác,
-    <span class="n">199</span> vật thể độc lập được giữ thay vì gộp thành một khối duy nhất.</p>
-  </div>
-</section>
-
-<section>
-  <h2>Kiểm định tự động</h2>
-  <p class="sub">Năm phép thử chạy sau mỗi lần dựng, không phải kiểm tra thủ công.
-  Điểm quan trọng: trước khi sửa, bộ này <b>báo trượt</b> — và nó trượt đúng chỗ.</p>
-  <div class="tw">
-  <table>
-    <tr><th>Phép thử</th><th>Kiểm tra</th><th>Kết quả</th></tr>
-    <tr><td>Cấu trúc dữ liệu</td><td>Đủ trường, đúng định dạng</td><td class="good">Đạt</td></tr>
-    <tr><td>Không có số liệu đặt sẵn</td><td>Mọi kích thước đều đo từ dữ liệu</td><td class="good">Đạt</td></tr>
-    <tr><td>Chiều cao trần hợp lý</td><td class="n">3,00</td><td class="good">Đạt</td></tr>
-    <tr><td>Vật không lớn hơn phòng</td><td class="n">209 đơn vị³</td><td class="good">Đạt</td></tr>
-    <tr><td>Vật nằm trong phòng</td><td class="n">0/89 lọt ra ngoài</td><td class="good">Đạt</td></tr>
-  </table>
-  </div>
-</section>
-
-<section>
-  <h2>Kiểm chứng trực tiếp</h2>
-  <p class="sub">Mở trong trình duyệt: kéo chuột để nhấc và di chuyển vật thể, thanh trượt
-  chỉnh trọng lực, khối lượng, độ nảy. Không cần cài gì.</p>
-  <a class="cta" href="viewer/index.html">Mở mô hình tương tác →</a>
-  <a class="cta" href="objects3d/index.html">Xem 3 vật hoàn thiện →</a>
-  <p class="sub" style="margin-top:1rem">Hai trang này dựng trên <b>bản đã kiểm bằng tay</b>:
-  8 vật rời trong scene vật lý, và 3 vật đã hoàn thiện mặt khuất bằng Hunyuan3D rồi ghép
-  ngược về đúng vị trí trong phòng. Con số 46/28 ở trên là sản lượng của bước tách tự động
-  — nhiều hơn, nhưng chưa qua kiểm tay như 11 vật này.</p>
-</section>
-
-<section>
-  <h2>Giới hạn hiện tại</h2>
-  <p class="sub">Nêu rõ để không ai dùng sai. Cả hai đều có đường xử lý đã xác định.</p>
-
-  <div class="card warn">
-    <h3>Tỉ lệ chưa hiệu chuẩn tuyệt đối</h3>
-    <p>Kích thước rơi rất gần mét (phòng 8,7 × 7,9 × 3,0; ống 3,07; bàn 0,60) và <b>tỉ lệ tương
-    đối giữa các vật là chính xác</b> — nhưng chưa có phép đo thật nào xác nhận. Tôi thử suy hệ số
-    quy đổi từ kích thước chuẩn của cửa, thang, xô: các ước lượng <b>không hội tụ</b>, nên tôi không
-    dán một con số vào cho có.</p>
-    <p>Đủ dùng cho mô phỏng tương đối và bài toán thao tác; chưa dùng làm số đo kỹ thuật.
-    <b>Hướng xử lý:</b> một kích thước thật đã biết trong cảnh là khoá được tỉ lệ toàn bộ.</p>
-  </div>
-
-  <div class="card warn">
-    <h3>Vùng khuất không có dữ liệu</h3>
-    <p>Camera không nhìn được mặt sau máy móc, nên mesh có <span class="n">334</span> vùng khuyết
-    rộng hơn 30 cm. Tôi kiểm lại trên mesh gốc trước khi cắt bất cứ thứ gì: chúng <b>có sẵn từ
-    bản quét</b>, không phải do xử lý sinh ra.</p>
-    <p>Tôi đã thử lấp bằng cách nối viền vào tâm và <b>bỏ hướng đó</b>: với lỗ rộng vài mét nó
-    tạo ra những tấm phẳng cắt ngang phòng — trông liền lạc nhưng là hình học bịa. Thà để lộ
-    chỗ thiếu còn hơn giao một bề mặt sai mà người dùng không biết.</p>
-    <p><b>Hướng xử lý:</b> mô hình sinh hình học cho mặt khuất (giai đoạn kế tiếp đã lên kế hoạch).</p>
-  </div>
-</section>
-
-<section>
-  <h2>Kỹ thuật, gọn</h2>
-  <div class="tw">
-  <table>
-    <tr><th>Giai đoạn</th><th>Phương pháp</th><th>Ra</th></tr>
-    <tr><td>Độ sâu</td><td>Depth-Anything-3, suy độ sâu đơn ảnh</td><td class="n">852 bản đồ</td></tr>
-    <tr><td>Ngoại quan</td><td>Planar 3D Gaussian Splatting, 98k vòng</td><td class="n">5,99 M điểm</td></tr>
-    <tr><td>Hình học</td><td>TSDF fusion, tham số suy từ cảnh</td><td class="n">20,6 M tam giác</td></tr>
-    <tr><td>Ngữ nghĩa</td><td>Qwen3-VL-8B chạy nội bộ</td><td class="n">90 lớp</td></tr>
-    <tr><td>Phân vùng</td><td>SAM3 theo lời nhắc văn bản</td><td class="n">852 khung</td></tr>
-    <tr><td>Hộp 3D</td><td>Nâng mặt nạ 2D lên 3D, VLM kiểm chứng</td><td class="n">95 vật</td></tr>
-    <tr><td>Tách vật</td><td>RANSAC tìm mặt phẳng vỏ phòng</td><td class="n">46 mesh rời</td></tr>
-  </table>
-  </div>
-  <p class="sub" style="margin-top:20px">Chạy trên một GPU, không kết nối mạng, 4 giờ 17 phút
-  cho toàn bộ. Trọng số và dữ liệu đầy đủ (3,93 GB) đã lưu trữ, tái sử dụng được.</p>
-</section>
-
-<section>
-  <h2>Việc tiếp theo</h2>
-  <p class="sub">Xếp theo thứ tự tôi cho là đáng làm trước, kèm lý do.</p>
-  <div class="tw">
-  <table>
-    <tr><th>Việc</th><th>Vì sao</th><th>Ước tính</th></tr>
-    <tr>
-      <td><b>Khoá tỉ lệ mét</b></td>
-      <td>Chặn đường tới mô phỏng vật lý thật. Cần một mốc đo trong cảnh, hoặc suy từ chiều cao camera.</td>
-      <td class="n">1–2 ngày</td>
-    </tr>
-    <tr>
-      <td><b>Sinh mặt khuất</b></td>
-      <td>Lấp 334 vùng thiếu bằng mô hình sinh hình học thay vì nội suy — mở đường cho nhấc vật ra khỏi cảnh.</td>
-      <td class="n">1 tuần</td>
-    </tr>
-    <tr>
-      <td><b>Chạy trên cảnh thứ hai</b></td>
-      <td>Phép thử thật của tính khái quát. Mọi tham số đã suy từ cảnh nên về nguyên tắc chạy được, nhưng chưa kiểm chứng.</td>
-      <td class="n">1 ngày</td>
-    </tr>
-    <tr>
-      <td><b>Xuất MJCF cho MuJoCo</b></td>
-      <td>Biến scene thành môi trường robot chạy được. Phụ thuộc mục tỉ lệ ở trên.</td>
-      <td class="n">2–3 ngày</td>
-    </tr>
-  </table>
-  </div>
-</section>
-
-<footer class="wrap">
-  Cảnh <span class="m">scannetpp_00777c41d4</span> · 852 khung hình · RTX PRO 6000 ·
-  toàn bộ số liệu trong trang này đo trên chính lần chạy này, không phải ước lượng.
-</footer>
+<div class="topbar">
+  <span class="wordmark">Trảo An Huy · Thực tập sinh Reinforcement Learning</span>
+  <span class="badge">Sprint 3 · gần 2 tuần</span>
 </div>
+
+<div class="deck" id="deck">
+
+  <!-- 1: Giới thiệu -->
+  <section class="slide active">
+    <div class="slide-inner">
+      <span class="sprint-badge">Sprint 3 · gần 2 tuần</span>
+      <p class="eyebrow">01 · Vấn đề</p>
+      <h1>Video điện thoại → Twin Digital Data</h1>
+      <p class="lede" style="margin-top:10px; font-size:14px;">Trảo An Huy · Thực tập sinh Reinforcement Learning
+        · dưới sự hướng dẫn của anh Nguyễn Doãn Hoàng</p>
+      <p class="lede">Biến video RGB quay bằng điện thoại thành dữ liệu 3D có cấu trúc, đủ đơn vị,
+        có kiểm chứng — để dùng cho Reinforcement Learning, và tạo thành một kho dữ liệu (data store)
+        sẵn sàng để xử lý tiếp.</p>
+      <div class="user-story">
+        <b>User story</b>
+        <p>Khi team RL thu data môi trường bằng video điện thoại, team cần một bộ <strong>Twin Digital
+        Data</strong> có geometry, camera, object, semantics và provenance để tạo environment,
+        train/evaluate policy và kiểm tra sim-to-real — thay vì dựng tay từng scene. Không cần thiết bị
+        chuyên dụng: chỉ một chiếc điện thoại quay video full HD là đủ.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2: Ý tưởng pipeline (giải thích cho người chưa biết gì) -->
+  <section class="slide">
+    <div class="slide-inner">
+      <p class="eyebrow">02 · Ý tưởng</p>
+      <p class="lede" style="margin-bottom:2px;">Đó là bài toán team RL đang gặp. Có 3 bước:</p>
+      <h2 style="text-align:center;">Một video điện thoại → một kho dữ liệu 3D dùng được ngay</h2>
+      <p class="lede" style="margin-top:8px;">Mục tiêu: trích xuất tối đa hình học, camera, vật thể, ngữ nghĩa từ
+        video RGB, tổ chức thành <strong>Twin Data</strong> có cấu trúc — không cần hoàn hảo tuyệt đối, chỉ cần
+        sai số được đo và không phá downstream task.</p>
+      <div class="value-points" style="grid-template-columns: repeat(3, 1fr); margin-top:20px;">
+        <div class="value-point"><strong>1. Quay</strong><p>Đi vòng quanh phòng/khu vực bằng điện thoại — không cần thiết bị đặc biệt.</p></div>
+        <div class="value-point"><strong>2. Dựng lại tự động</strong><p>AI phục hồi camera, hình học, tách từng vật thể, gán ngữ nghĩa — 8 bước cụ thể ở slide sau.</p></div>
+        <div class="value-point"><strong>3. Ra kho dữ liệu</strong><p><b>Twin Data</b> dùng để dựng môi trường mô phỏng, huấn luyện và kiểm tra robot trước khi ra đời thực.</p></div>
+      </div>
+      <p class="lede" style="margin-top:20px;">Không LiDAR, không dựng tay Blender, không phòng mocap —
+        <strong>chỉ một chiếc điện thoại quay video full HD là đủ</strong>. Sơ đồ đầy đủ 8 bước ở slide 3,
+        bấm "Full screen" để đọc chi tiết.</p>
+    </div>
+  </section>
+
+  <!-- 3: Pipeline + chi tiết 8 giai đoạn -->
+  <section class="slide">
+    <div class="slide-inner">
+      <p class="eyebrow">03 · Cách làm</p>
+      <div class="pipeline-row">
+        <div class="pipeline-fig-small" id="pipelineFig">
+          <img src="media/pipeline_overview.png" alt="Pipeline: video điện thoại → Twin Data" id="pipelineImg">
+        </div>
+        <div class="pipeline-row-text">
+          <p class="lede" style="text-align:left; margin:0; font-size:12.5px;">8 bước, y hệt 3 bước vừa nêu, chỉ chi tiết hơn.
+            NEW = bundle hiện tại · OLD = baseline · GAP = chưa đủ artifact xác nhận.</p>
+          <button class="pipeline-fullscreen" type="button" id="fsBtn">Xem đầy đủ ↗</button>
+        </div>
+      </div>
+
+      <div class="stage-nav" id="stageNav">
+        <button type="button" class="stage-arrow" id="stagePrev">‹</button>
+        <button type="button" data-stage="0">01</button><button type="button" data-stage="1">02</button>
+        <button type="button" data-stage="2">03</button><button type="button" data-stage="3">04</button>
+        <button type="button" data-stage="4">05</button><button type="button" data-stage="5">06</button>
+        <button type="button" data-stage="6">07</button><button type="button" data-stage="7">08</button>
+        <button type="button" class="stage-arrow" id="stageNext">›</button>
+        <span class="stage-counter" id="stageCounter">01 / 08</span>
+      </div>
+
+      <div class="stage-panel active" data-stage="0">
+        <div class="stage-head"><div class="stage-number">01</div><h2>Input</h2></div>
+        <p class="stage-desc">Giữ video, frame order, timestamp, camera metadata để viewpoint change dùng được cho reconstruction.</p>
+        <div class="stage-body">
+          <div class="stage-media one"><video src="media/01_dau_vao_video.mp4" muted loop playsinline preload="metadata" controls></video></div>
+          <ul class="stage-facts">
+            <li><b>852 frames</b> trong run hiện có, thứ tự thời gian giữ nguyên.</li>
+            <li>RGB nhiều góc nhìn, không cần thiết bị đặc biệt.</li>
+            <li>Còn thiếu: <code>input_manifest.json</code> machine-readable.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stage-panel" data-stage="1">
+        <div class="stage-head"><div class="stage-number">02</div><h2>Perception &amp; Geometry</h2></div>
+        <p class="stage-desc">SfM phục hồi camera trajectory; Depth Anything 3 ước lượng depth; 3DGS tạo representation render lại được.</p>
+        <div class="stage-body">
+          <div class="stage-media two">
+            <video src="twindata/media/06_depth.mp4" muted loop playsinline preload="metadata" controls></video>
+            <video src="twindata/media/03_3dgs_renders.mp4" muted loop playsinline preload="metadata" controls></video>
+          </div>
+          <ul class="stage-facts">
+            <li>Camera poses + intrinsics phục hồi bằng COLMAP SfM.</li>
+            <li>Depth: <b>estimate</b> theo view (chưa phải physical calibration).</li>
+            <li>3D Gaussian Scene: dense representation, render mới góc chưa quay.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stage-panel" data-stage="2">
+        <div class="stage-head"><div class="stage-number">03</div><h2>Global Calibration</h2></div>
+        <p class="stage-desc">Đưa camera, point cloud, depth, object và mesh về cùng một world coordinate và một global scale.</p>
+        <div class="stage-body">
+          <div class="stage-media one"><video src="twindata/media/07_cutaway_interior.mp4" muted loop playsinline preload="metadata" controls></video></div>
+          <ul class="stage-facts">
+            <li>Scene layout thống nhất trong một hệ tọa độ.</li>
+            <li>Object dimensions cùng một scale.</li>
+            <li><b>Giới hạn:</b> kích thước hiện có là metric-aware estimate; physical reference chưa gắn vào run.</li>
+            <li><a class="stage-link" href="objects3d/objects_report.json">Object dimensions ↗</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stage-panel" data-stage="3">
+        <div class="stage-head"><div class="stage-number">04</div><h2>Object Understanding</h2></div>
+        <p class="stage-desc">Gom semantic class, mask, depth, camera pose, observed point cloud và 3D OBB thành package riêng cho từng object.</p>
+        <div class="stage-body">
+          <div class="stage-media one"><img src="twindata/media/boxes_00.png" alt="3D OBB trên reconstructed scene"></div>
+          <ul class="stage-facts">
+            <li>Instance ID, semantic class, multi-view RGB/mask/depth.</li>
+            <li>OBB: position, orientation, dimensions.</li>
+            <li><b>Inventory:</b> 46 candidate mesh trong baseline, 5 package có asset review riêng.</li>
+            <li><a class="stage-link" href="objects3d/objects_report.json">Object report ↗</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stage-panel" data-stage="4">
+        <div class="stage-head"><div class="stage-number">05</div><h2>Coverage Analysis</h2></div>
+        <p class="stage-desc">Đo phần object đã quan sát và phần bị khuất. Chỉ object thiếu dữ liệu mới chuyển sang completion.</p>
+        <div class="stage-body">
+          <div class="stage-media one"><img src="twindata/media/cutaway_00.png" alt="Cutaway hidden surface"></div>
+          <ul class="stage-facts">
+            <li>Cutaway là bằng chứng trực quan cho phần bị khuất.</li>
+            <li><b>Còn thiếu thật:</b> chưa có <code>object_coverage.json</code> dạng số (visible_views, coverage_ratio).</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stage-panel" data-stage="5">
+        <div class="stage-head"><div class="stage-number">06</div><h2>Completion</h2></div>
+        <p class="stage-desc">Hunyuan3D 2.0 bổ sung geometry chưa quan sát được, ở cấp object — không generate lại toàn bộ scene.</p>
+        <div class="stage-body">
+          <div class="stage-media one"><video src="objects3d/obj_0179_workbench_turntable.mp4" muted loop playsinline preload="metadata" controls></video></div>
+          <ul class="stage-facts">
+            <li>5 candidate mesh hoàn thiện: workbench, blade, trash can, shelf, ladder.</li>
+            <li>Mesh sinh ra luôn đánh dấu <b>inferred</b>, không lẫn với observed.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stage-panel" data-stage="6">
+        <div class="stage-head"><div class="stage-number">07</div><h2>Alignment &amp; Verification</h2></div>
+        <p class="stage-desc">Căn candidate mesh về world coordinate rồi render ngược từ camera thật để so với observation.</p>
+        <div class="stage-body">
+          <div class="stage-media one"><img src="twindata/media/render_vs_photo.png" alt="Render so với ảnh nguồn"></div>
+          <ul class="stage-facts">
+            <li>Check: silhouette (render/photo), depth theo view, dimensions từ object report.</li>
+            <li><b>Còn thiếu:</b> <code>verification_report.json</code> với score và threshold tường minh.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="stage-panel" data-stage="7">
+        <div class="stage-head"><div class="stage-number">08</div><h2>Twin Digital Data</h2></div>
+        <p class="stage-desc">Đầu ra là một package có cấu trúc — không chỉ một mesh. Downstream dùng chung geometry, camera, object, semantics, quality.</p>
+        <div class="stage-body">
+          <div class="stage-media one"><img src="twindata/media/room_robot_check.png" alt="Room và robot check"></div>
+          <ul class="stage-facts">
+            <li><b>Geometry:</b> point cloud, mesh, surfaces · <b>Camera:</b> poses, intrinsics, trajectory.</li>
+            <li><b>Object:</b> ID, class, OBB, dimensions · <b>Quality:</b> confidence, error, verification.</li>
+            <li><b>Provenance:</b> model, version, source frames.</li>
+            <li><b>Kho output gồm nhiều loại file, mỗi loại một việc:</b> ảnh/video (<code>.mp4</code>/<code>.png</code>) để xem trực quan; mesh 3D (<code>.glb</code>/<code>.obj</code>) để load vào game engine hoặc simulator; point cloud (<code>.ply</code>) cho xử lý hình học; file scene robot (<code>.mjcf</code>/<code>.xml</code>) để nạp thẳng vào MuJoCo; và file mô tả (<code>.json</code>) ghi kích thước, vị trí, độ tin cậy của từng vật thể.</li>
+            <li><a class="stage-link" href="objects3d/objects_report.json">Object report ↗</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3: Outputs / Điểm khác biệt -->
+  <section class="slide">
+    <div class="slide-inner">
+      <p class="eyebrow">04 · Kết quả</p>
+      <h2>Ra được gì, và khác gì so với cách cũ?</h2>
+      <p class="lede" style="margin:4px 0 2px; text-align:left; max-width:1000px; font-size:12.5px;">
+        <strong>5 loại file:</strong> ảnh/video (.mp4, .png) xem trực quan · mesh (.glb, .obj) load simulator/collision ·
+        point cloud (.ply) xử lý hình học · scene robot (.mjcf, .xml) nạp MuJoCo · mô tả (.json) kích thước/vị trí/độ tin cậy.</p>
+      <div class="difference-strip" style="grid-template-columns: repeat(4, 1fr); margin-top:10px;">
+        <div class="difference"><strong>So với LiDAR</strong><p>LiDAR cho hình học chính xác hơn nhưng cần thiết bị scan đắt tiền, khó tiếp cận. Cách này chỉ cần điện thoại.</p></div>
+        <div class="difference"><strong>So với dựng tay (Blender)</strong><p>Dựng tay cho vật thể sạch hơn nhưng tốn hàng tuần nhân công mỗi scene. Cách này tự động, tốn một lần đi bộ quay video.</p></div>
+        <div class="difference"><strong>So với mocap rig chuyên dụng</strong><p>Mocap ghi chuyển động người nhưng không có hình học môi trường. Twin Digital Data bổ sung đúng phần môi trường đó.</p></div>
+        <div class="difference"><strong>So với video thô</strong><p>Video thô không đo được, không tách vật thể được. Ở đây có geometry đo được, object-level, kèm nhãn observed/inferred.</p></div>
+      </div>
+      <div class="output-grid">
+        <article class="output-card"><video class="output-thumb" src="media/01_dau_vao_video.mp4" autoplay muted loop playsinline preload="metadata"></video><h3>RGB frames</h3><p>Ví dụ: một video, quay nhiều góc nhìn.</p><div class="output-meta"><span class="output-status ready">OLD</span><a href="media/01_dau_vao_video.mp4">Input video</a></div></article>
+        <article class="output-card"><video class="output-thumb" src="twindata/media/04_source_photos.mp4" autoplay muted loop playsinline preload="metadata"></video><h3>Video metadata</h3><p>852 frames · temporal order.</p><div class="output-meta"><span class="output-status ready">NEW</span><a href="twindata/media/04_source_photos.mp4">Input evidence</a></div></article>
+        <article class="output-card"><img class="output-thumb contain" src="media/camera_poses_metric.png" alt="Camera poses metric"><h3>Camera poses (metric)</h3><p>Trajectory và orientation.</p><div class="output-meta"><span class="output-status partial">STAGE 2.1</span><a href="#" data-goto-stage="1">Camera output</a></div></article>
+        <article class="output-card"><video class="output-thumb" src="twindata/media/06_depth.mp4" autoplay muted loop playsinline preload="metadata"></video><h3>Depth maps</h3><p>DA3 depth estimate theo view.</p><div class="output-meta"><span class="output-status ready">NEW</span><a href="twindata/media/06_depth.mp4">Depth video</a></div></article>
+        <article class="output-card"><video class="output-thumb" src="twindata/media/03_3dgs_renders.mp4" autoplay muted loop playsinline preload="metadata"></video><h3>3D Gaussian Scene</h3><p>Dense scene representation.</p><div class="output-meta"><span class="output-status ready">NEW</span><a href="twindata/media/03_3dgs_renders.mp4">3DGS render</a></div></article>
+        <article class="output-card"><img class="output-thumb" src="media/depth_maps.png" alt="Depth map grid" loading="lazy"><h3>Depth grid</h3><p>Depth evidence nhiều frame.</p><div class="output-meta"><span class="output-status ready">OLD</span><a href="media/depth_maps.png">Depth image</a></div></article>
+        <article class="output-card"><video class="output-thumb" src="twindata/media/01_mesh_turntable.mp4" autoplay muted loop playsinline preload="metadata"></video><h3>Scene mesh</h3><p>Scene export trong bundle.</p><div class="output-meta"><span class="output-status ready">NEW</span><a href="twindata/media/01_mesh_turntable.mp4">Scene turntable</a></div></article>
+        <article class="output-card object-output"><img class="output-thumb contain" src="twindata/media/obj_0179_workbench_4views.png" alt="Workbench, four views" loading="lazy"><h3>Object · workbench</h3><p>Four views + GLB.</p><div class="output-meta"><span class="output-status ready">NEW</span><a href="objects3d/obj_0179_workbench.glb">Workbench GLB</a></div></article>
+        <article class="output-card object-output"><img class="output-thumb contain" src="twindata/media/obj_0202_blade_4views.png" alt="Blade, four views" loading="lazy"><h3>Object · blade</h3><p>Four views + GLB.</p><div class="output-meta"><span class="output-status ready">NEW</span><a href="objects3d/obj_0202_blade.glb">Blade GLB</a></div></article>
+        <article class="output-card object-output"><img class="output-thumb contain" src="twindata/media/obj_0203_trash_can_4views.png" alt="Trash can, four views" loading="lazy"><h3>Object · trash can</h3><p>Four views + GLB.</p><div class="output-meta"><span class="output-status ready">NEW</span><a href="objects3d/obj_0203_trash_can.glb">Trash can GLB</a></div></article>
+        <article class="output-card object-output"><img class="output-thumb contain" src="media/obj_0211_shelf_preview.png" alt="Shelf, textured" loading="lazy"><h3>Object · shelf</h3><p>Hunyuan textured preview.</p><div class="output-meta"><span class="output-status ready">NEW</span><a href="media/obj_0211_shelf_preview.png">Shelf preview</a></div></article>
+        <article class="output-card object-output"><img class="output-thumb contain" src="media/obj_0213_ladder_preview.png" alt="Ladder, textured" loading="lazy"><h3>Object · ladder</h3><p>Hunyuan textured preview.</p><div class="output-meta"><span class="output-status ready">NEW</span><a href="media/obj_0213_ladder_preview.png">Ladder preview</a></div></article>
+        <article class="output-card"><video class="output-thumb" src="media/heading_270.mp4" autoplay muted loop playsinline preload="metadata"></video><h3>Planning / navigation</h3><p>Heading test 270° · 3.49m, upright 0.87.</p><div class="output-meta"><span class="output-status ready">NEW</span><a href="media/heading_270.mp4">Heading test</a></div></article>
+        <article class="output-card"><img class="output-thumb" src="twindata/media/cutaway_00.png" alt="Cutaway hidden surface" loading="lazy"><h3>Observed / hidden</h3><p>Coverage evidence.</p><div class="output-meta"><span class="output-status partial">STAGE 5</span><a href="#" data-goto-stage="4">Coverage</a></div></article>
+        <article class="output-card"><img class="output-thumb" src="twindata/media/render_vs_photo.png" alt="Render versus photo verification" loading="lazy"><h3>Alignment / verification</h3><p>Render so với ảnh nguồn.</p><div class="output-meta"><span class="output-status partial">STAGE 7</span><a href="#" data-goto-stage="6">Verification</a></div></article>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4: Case study Xingying/CT22 -->
+  <section class="slide">
+    <div class="slide-inner">
+      <p class="eyebrow">05 · Bằng chứng thực tế</p>
+      <p class="lede" style="margin-bottom:2px;">Nói khác biệt là một chuyện — đây là 2 vấn đề thật mà chính pipeline này giải quyết được.</p>
+      <h2>Ví dụ 1 · Motion cần environment context</h2>
+      <p class="lede">Data gốc Xingying có motion nhưng không biểu diễn đầy đủ cầu thang. Khi dùng
+        cho mimic, pose có thể trông đúng nhưng bài toán chưa được kiểm tra với terrain thật.</p>
+      <figure class="comparison-video">
+        <video src="media/comparison_xingying_ct22_stairs.mp4" autoplay muted loop playsinline preload="auto" controls></video>
+        <figcaption><strong>Xingying original data ↔ stair terrain · CT22.</strong> Lý do cần Twin Digital Data.</figcaption>
+      </figure>
+      <div class="comparison-points">
+        <div class="comparison-point"><strong>Data gốc</strong><p>Motion không đi kèm scene geometry đầy đủ.</p></div>
+        <div class="comparison-point"><strong>Rủi ro cho RL</strong><p>Mimic / policy bị đánh giá trong environment thiếu địa hình.</p></div>
+        <div class="comparison-point"><strong>Twin Digital Data</strong><p>Gắn motion với terrain, geometry, object và provenance.</p></div>
+      </div>
+
+      <div style="margin-top:24px; width:100%; border-top:1px solid var(--line); padding-top:20px;">
+        <p class="eyebrow">Ví dụ 2 · RGBD tự thu — thiếu vùng khi quét</p>
+        <p class="lede" style="text-align:left; max-width:900px; margin-left:0;">Video RGBD tự thu dưới đây là dữ liệu thật:
+          khi quét, luôn có vùng bị thiếu (che khuất, giới hạn cảm biến, chưa đi hết góc). Đây chính là vấn đề
+          Coverage Analysis (giai đoạn 5) phát hiện, rồi Completion bằng Hunyuan3D (giai đoạn 6) sinh mesh bù —
+          không phải bịa lại toàn bộ vật, chỉ bù đúng phần bị thiếu.</p>
+        <figure class="comparison-video" style="margin-left:0;">
+          <video src="media/rgbd_capture_gap.mp4" autoplay muted loop playsinline preload="auto" controls></video>
+          <figcaption><strong>RGBD tự thu · vùng thiếu khi quét.</strong> Vấn đề thật, giải quyết bằng chính pipeline này.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5: Value -->
+  <section class="slide">
+    <div class="slide-inner">
+      <p class="eyebrow">06 · Giá trị sử dụng</p>
+      <p class="lede" style="margin-bottom:2px;">Giải quyết được 2 vấn đề thật ở trên rồi — vậy dữ liệu này còn dùng lại được gì nữa?</p>
+      <h2>Scene có thể chỉnh sửa, không chỉ để xem</h2>
+      <p class="lede">Environment được tách thành object-level data — chọn, kéo, sắp xếp lại vật thể để tạo scenario mới cho RL.</p>
+      <div class="before-after">
+        <figure><img src="media/case_factory_before.png" alt="Factory scene trước khi move object" loading="lazy"><figcaption><strong>BEFORE</strong> · vị trí ban đầu.</figcaption></figure>
+        <figure><img src="media/case_factory_after.png" alt="Factory scene sau khi move object" loading="lazy"><figcaption><strong>AFTER</strong> · sau khi move object, scenario mới.</figcaption></figure>
+      </div>
+      <div class="value-points">
+        <div class="value-point"><strong>Dễ tạo environment</strong><p>Video điện thoại thay cho dựng scene thủ công từ đầu.</p></div>
+        <div class="value-point"><strong>Dễ scale</strong><p>Thêm scene mới bằng cách thu thêm video.</p></div>
+        <div class="value-point"><strong>Ít thiết bị đặc biệt</strong><p>RGB phone là điểm bắt đầu; không bắt buộc LiDAR/mocap.</p></div>
+        <div class="value-point"><strong>Giá trị</strong><p>Đóng gói thành dịch vụ tạo environment RL, dataset, scenario evaluation.</p></div>
+      </div>
+      <div style="margin-top:22px; width:100%; text-align:center; border-top:1px solid var(--line); padding-top:18px;">
+        <p class="eyebrow" style="margin-bottom:8px;">Demo thực tế · use case</p>
+        <video src="media/usecase_move_around.mp4" autoplay muted loop playsinline preload="auto" controls
+               style="max-height:32vh; width:auto; margin:0 auto; border-radius:9px; border:1px solid var(--line);"></video>
+        <p class="lede" style="margin-top:10px; font-size:13px;">Cùng object package này, có thể <strong>config vật lý</strong>
+          (khối lượng, va chạm) rồi <strong>kéo/di chuyển</strong> vật thể trực tiếp trong scene — và dùng để dựng một
+          <strong>kho đồ vật 3D</strong> tái sử dụng cho nhiều cảnh khác, không phải dựng lại từ đầu mỗi lần.
+          <a href="viewer/index.html" target="_blank" rel="noopener">Scene tương tác ↗</a> ·
+          <a href="objects3d/index.html" target="_blank" rel="noopener">Kho đồ vật 3D ↗</a></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6: Hiệu quả mang lại -->
+  <section class="slide">
+    <div class="slide-inner">
+      <p class="eyebrow">07 · Hiệu quả mang lại</p>
+      <p class="lede" style="margin-bottom:2px;">Không chỉ chỉnh sửa được — đây là hiệu quả thực tế mà cách làm này mang lại.</p>
+      <h2>Mô hình hóa 3D nhanh hơn, ở nhiều môi trường thực tế hơn</h2>
+      <div class="value-points">
+        <div class="value-point"><strong>3D chỉ với 1 điện thoại</strong><p>Không LiDAR, không dựng tay, không mocap — sai số được đo và chấp nhận được, không cần hoàn hảo tuyệt đối.</p></div>
+        <div class="value-point"><strong>Scale nhanh hơn</strong><p>Thêm môi trường mới = quay thêm một video, không tốn thiết bị hay hàng tuần dựng tay.</p></div>
+        <div class="value-point"><strong>Huấn luyện nhanh hơn</strong><p>Nhiều scenario, nhiều môi trường thực tế cùng lúc, không dựng lại từ đầu mỗi lần.</p></div>
+        <div class="value-point"><strong>Thử nghiệm nhanh hơn</strong><p>Test policy trên nhiều environment khác nhau trước khi triển khai ra đời thực.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7: Sources -->
+  <section class="slide">
+    <div class="slide-inner">
+      <p class="eyebrow">08 · Nguồn &amp; tham khảo</p>
+      <p class="lede" style="margin-bottom:2px;">Muốn kiểm chứng phương pháp? Đây là nguồn gốc mọi model và dataset đã dùng ở các bước trên.</p>
+      <h2>Dataset và tài liệu tham khảo</h2>
+      <div class="source-columns">
+        <div class="source-column">
+          <h3>Dataset / weights (Kaggle)</h3>
+          <ul class="source-list">
+            <li><div><strong>v3d-build-cache-sm120</strong><span>CUDA build cache PGSR, sm_120 Blackwell</span></div><a href="https://www.kaggle.com/datasets/traoanhuy/v3d-build-cache-sm120" target="_blank">Kaggle ↗</a></li>
+            <li><div><strong>v3d-da3nested-giant-large</strong><span>Depth-Anything-3 giant/large weights</span></div><a href="https://www.kaggle.com/datasets/traoanhuy/v3d-da3nested-giant-large" target="_blank">Kaggle ↗</a></li>
+            <li><div><strong>v3d-sam31-multiplex</strong><span>SAM 3.1 weights</span></div><a href="https://www.kaggle.com/datasets/traoanhuy/v3d-sam31-multiplex" target="_blank">Kaggle ↗</a></li>
+            <li><div><strong>v3d-sam3-image</strong><span>SAM3 image-weight mirror, offline kernel</span></div><a href="https://www.kaggle.com/datasets/traoanhuy/v3d-sam3-image" target="_blank">Kaggle ↗</a></li>
+            <li><div><strong>v3d-small-factory-scene</strong><span>Pipeline output: mesh, point cloud, scene artifacts</span></div><a href="https://www.kaggle.com/datasets/traoanhuy/v3d-small-factory-scene" target="_blank">Kaggle ↗</a></li>
+          </ul>
+        </div>
+        <div class="source-column">
+          <h3>Paper / reference</h3>
+          <ul class="source-list">
+            <li><div><strong>COLMAP / SfM</strong><span>Structure-from-Motion Revisited, CVPR 2016</span></div><a href="https://doi.org/10.1109/CVPR.2016.445" target="_blank">DOI ↗</a></li>
+            <li><div><strong>Depth Anything 3</strong><span>arXiv 2511.10647</span></div><a href="https://arxiv.org/abs/2511.10647" target="_blank">arXiv ↗</a></li>
+            <li><div><strong>3D Gaussian Splatting</strong><span>arXiv 2308.04079</span></div><a href="https://arxiv.org/abs/2308.04079" target="_blank">arXiv ↗</a></li>
+            <li><div><strong>SAM 3</strong><span>ICLR 2026 proceedings</span></div><a href="https://proceedings.iclr.cc/paper_files/paper/2026/hash/e0982cbc81401df3430ee1ff780dc7a2-Abstract-Conference.html" target="_blank">ICLR ↗</a></li>
+            <li><div><strong>Qwen2.5-VL</strong><span>arXiv 2502.13923 — VLM family reference</span></div><a href="https://arxiv.org/abs/2502.13923" target="_blank">arXiv ↗</a></li>
+            <li><div><strong>Hunyuan3D 2.0</strong><span>arXiv 2501.12202</span></div><a href="https://arxiv.org/abs/2501.12202" target="_blank">arXiv ↗</a></li>
+            <li><div><strong>Sim-to-real RL survey</strong><span>Nature Machine Intelligence</span></div><a href="https://www.nature.com/articles/s42256-022-00573-6" target="_blank">Nature ↗</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="close-links">
+        <a href="#" data-goto-slide="0">← Về đầu</a>
+        <a href="viewer/index.html" target="_blank" rel="noopener">Scene tương tác ↗</a>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div class="navbar">
+  <button class="nav-btn" id="prevBtn" aria-label="Slide trước">← Trước</button>
+  <div class="dots" id="dots"></div>
+  <span class="counter" id="counter">1 / 8</span>
+  <button class="nav-btn" id="nextBtn" aria-label="Slide sau">Sau →</button>
+</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const dotsEl = document.getElementById('dots');
+  const counterEl = document.getElementById('counter');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const detailsSlideIndex = slides.findIndex((s) => s.querySelector('#stageNav'));
+  let idx = 0;
+
+  slides.forEach((_, i) => {
+    const b = document.createElement('button');
+    b.className = 'dot' + (i === 0 ? ' active' : '');
+    b.setAttribute('aria-label', 'Đi tới slide ' + (i + 1));
+    b.addEventListener('click', () => go(i));
+    dotsEl.appendChild(b);
+  });
+  const dots = Array.from(dotsEl.children);
+
+  function render() {
+    slides.forEach((s, i) => s.classList.toggle('active', i === idx));
+    dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+    counterEl.textContent = (idx + 1) + ' / ' + slides.length;
+    prevBtn.disabled = idx === 0;
+    nextBtn.disabled = idx === slides.length - 1;
+    const active = slides[idx];
+    active.scrollTop = 0;
+    requestAnimationFrame(() => { active.scrollTop = 0; });
+    slides.forEach((s, i) => {
+      s.querySelectorAll('video[autoplay]').forEach((v) => {
+        if (i === idx) { v.currentTime = 0; v.play().catch(() => {}); }
+        else { v.pause(); }
+      });
+    });
+  }
+  function go(i) { idx = Math.max(0, Math.min(slides.length - 1, i)); render(); }
+
+  prevBtn.addEventListener('click', () => go(idx - 1));
+  nextBtn.addEventListener('click', () => go(idx + 1));
+
+  // Nested 8-stage carousel inside the Details slide
+  const stagePanels = Array.from(document.querySelectorAll('.stage-panel'));
+  const stageButtons = Array.from(document.querySelectorAll('.stage-nav button[data-stage]'));
+  const stageCounter = document.getElementById('stageCounter');
+  let stageIdx = 0;
+
+  function renderStage() {
+    stagePanels.forEach((p, i) => p.classList.toggle('active', i === stageIdx));
+    stageButtons.forEach((b, i) => b.classList.toggle('active', i === stageIdx));
+    stageCounter.textContent = String(stageIdx + 1).padStart(2, '0') + ' / ' + String(stagePanels.length).padStart(2, '0');
+    stagePanels.forEach((p, i) => {
+      p.querySelectorAll('video').forEach((v) => {
+        if (i === stageIdx) { v.muted = true; v.currentTime = 0; v.play().catch(() => {}); }
+        else { v.pause(); }
+      });
+    });
+  }
+  function goStage(i) { stageIdx = (i + stagePanels.length) % stagePanels.length; renderStage(); }
+
+  stageButtons.forEach((b) => b.addEventListener('click', () => goStage(Number(b.dataset.stage))));
+  document.getElementById('stagePrev').addEventListener('click', () => goStage(stageIdx - 1));
+  document.getElementById('stageNext').addEventListener('click', () => goStage(stageIdx + 1));
+
+  document.querySelectorAll('[data-goto-stage]').forEach((link) => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      go(detailsSlideIndex);
+      goStage(Number(link.dataset.gotoStage));
+    });
+  });
+  document.querySelectorAll('[data-goto-slide]').forEach((link) => {
+    link.addEventListener('click', (e) => { e.preventDefault(); go(Number(link.dataset.gotoSlide)); });
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft' && e.key !== ' ') return;
+    if (idx === detailsSlideIndex) {
+      if (e.key === 'ArrowRight' || e.key === ' ') goStage(stageIdx + 1);
+      if (e.key === 'ArrowLeft') goStage(stageIdx - 1);
+    } else {
+      if (e.key === 'ArrowRight' || e.key === ' ') go(idx + 1);
+      if (e.key === 'ArrowLeft') go(idx - 1);
+    }
+  });
+
+  document.getElementById('fsBtn').addEventListener('click', () => {
+    const fig = document.getElementById('pipelineFig');
+    if (fig.requestFullscreen) fig.requestFullscreen();
+  });
+  document.getElementById('pipelineImg').addEventListener('click', () => {
+    const fig = document.getElementById('pipelineFig');
+    if (fig.requestFullscreen) fig.requestFullscreen();
+  });
+
+  render();
+  renderStage();
+</script>
+
+</body>
+</html>
