@@ -20,7 +20,7 @@ Four folders, split by what you want from a document rather than who wrote it.
 
 | Document | Contents |
 | :--- | :--- |
-| [pipeline-runbook.md](guides/pipeline-runbook.md) | Benchmark runbook for the Small Factory scene |
+| [pipeline-runbook.md](guides/pipeline-runbook.md) | Recorded ScanNet++ pilot run and offline environment preparation |
 | [kaggle-deployment.md](guides/kaggle-deployment.md) | Robust Kaggle deployment: proxy expiry, retries, resume |
 | [gpu-deployment.md](guides/gpu-deployment.md) | SSH GPU server provisioning and conda setup |
 | [holispatial-hunyuan3d-adapter.md](guides/holispatial-hunyuan3d-adapter.md) | Step-by-step adapter pipeline (`scripts/adapter/`) |
@@ -33,6 +33,7 @@ Four folders, split by what you want from a document rather than who wrote it.
 
 | Document | Contents |
 | :--- | :--- |
+| [technical-report.md](reference/technical-report.md) | Detailed project architecture, equations, recorded benchmarks, and execution notes |
 | [output-quality.md](reference/output-quality.md) | What limits output quality, and the parameter behind each limit |
 | [video-to-boxes.md](reference/video-to-boxes.md) | Mechanics of 2D-to-3D bounding box lifting |
 | [lift3d-postprocess-history.md](reference/lift3d-postprocess-history.md) | How box post-processing evolved, and why |
@@ -46,10 +47,8 @@ These change every session. Treat them as the current reading, not as a spec.
 
 | Document | Contents |
 | :--- | :--- |
-| [SESSION_STATE.txt](state/SESSION_STATE.txt) | Stage completion and open gates, updated as stages land |
 | [context.md](state/context.md) | Active execution context for the current run |
 | [strategy-context.md](state/strategy-context.md) | Strategy for high-quality runs on the offline RTX 6000 |
-| [input_prompt.txt](state/input_prompt.txt) | The prompt text the current run was framed with |
 
 ## Elsewhere
 
