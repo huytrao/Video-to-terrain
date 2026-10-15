@@ -59,13 +59,13 @@ If SAM3 unavailable, Stage D2 falls back to depth-edge + connected components st
 ## 🤖 3. Robot Policy Controllers (Stage H)
 
 ### Required Actions
-- [ ] **Install MJLab and vinrobotics_mjlab** (for real policy configs):
+- [ ] **Install MJLab and mjlab_robot_pkg** (for real policy configs):
   ```bash
   # From source (recommended for development)
-  pip install -e /path/to/vinrobotics_mjlab
+  pip install -e /path/to/mjlab_robot_pkg
   
   # Or if published to PyPI
-  pip install mjlab vinrobotics_mjlab
+  pip install mjlab mjlab_robot_pkg
   ```
 - [ ] **Configure policy type** in `.env`:
   ```bash
@@ -226,7 +226,7 @@ python -m src.v2t.setup_production --stage video
 - [ ] Sufficient disk space (100GB+ for outputs)
 - [ ] Network access to `integrate.api.nvidia.com` (NIM API)
 - [ ] HuggingFace Hub access (for SAM3 download)
-- [ ] MJLab/vinrobotics_mjlab installed
+- [ ] MJLab/mjlab_robot_pkg installed
 
 ### Post-deployment
 - [ ] First production run completes successfully
@@ -242,7 +242,7 @@ python -m src.v2t.setup_production --stage video
 |-------|----------|
 | "No valid NVIDIA API keys" | Check `.env` has real `nvapi-` keys, not placeholders |
 | "SAM3 unavailable" | Run setup_production --stage sam3; check HF Hub access |
-| "mjlab not available" | `pip install -e /path/to/vinrobotics_mjlab` |
+| "mjlab not available" | `pip install -e /path/to/mjlab_robot_pkg` |
 | "CUDA out of memory" | Reduce `MAX_FRAMES`, `DA3_PROCESS_RES`, or use CPU |
 | "DA3 slow" | Ensure GPU detected; check `torch.cuda.is_available()` |
 | "Policy config not generated" | Run setup_production --stage policy |

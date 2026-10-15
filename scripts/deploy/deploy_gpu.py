@@ -15,14 +15,25 @@ import time
 import logging
 import argparse
 import subprocess
+import getpass
 from pathlib import Path
 from typing import Optional, List, Dict, Any, Callable
 from dataclasses import dataclass, field
 from contextlib import contextmanager
 
-import paramiko
-from paramiko import SSHClient, AutoAddPolicy, SFTPClient
-from paramiko.ssh_exception import SSHException, AuthenticationException
+try:
+    import paramiko
+    from paramiko import SSHClient, AutoAddPolicy, SFTPClient
+    from paramiko.ssh_exception import SSHException, AuthenticationException
+    PARAMIKO_AVAILABLE = True
+except ImportError:
+    PARAMIKO_AVAILABLE = False
+    paramiko = None
+    SSHClient = None
+    AutoAddPolicy = None
+    SFTPClient = None
+    SSHException = Exception
+    AuthenticationException = Exception
 
 # Optional: fabric for higher-level operations
 try:
@@ -31,7 +42,9 @@ try:
     FABRIC_AVAILABLE = True
 except ImportError:
     FABRIC_AVAILABLE = False
-    print("Warning: fabric not installed. Using paramiko only. Install with: pip install fabric")
+    Connection = None
+    Config = None
+    Transfer = None
 
 # =============================================================================
 # CONFIGURATION
@@ -42,7 +55,7 @@ class ServerConfig:
     """Server connection configuration."""
     host: str = "10.188.189.205"
     user: str = "phnh"
-    password: str = "1"
+    password: Optional[str] = field(default_factory=lambda: os.environ.get("SERVER_PASS") or os.environ.get("SERVER_PASSWORD"))
     remote_dir: str = "/home/phnh/Video-to-Terrain"
     port: int = 22
     connect_timeout: int = 30
@@ -159,8 +172,14 @@ class SSHManager:
         self.sftp: Optional[SFTPClient] = None
         self._fabric_conn = None
 
-    def connect(self, max_retries: int = 3, retry_delay: float = 2.0) -> bool:
-        """Establish SSH connection with retries."""
+        if not PARAMIKO_AVAILABLE:
+            self.logger.error("paramiko is not installed. Install with: pip install paramiko")
+            return False
+
+        if not self.config.password:
+            self.logger.error("Authentication requires a password. Set SERVER_PASS environment variable or pass --password.")
+            return False
+
         for attempt in range(1, max_retries + 1):
             try:
                 self.logger.debug(f"Connecting to {self.config.user}@{self.config.host}:{self.config.port} (attempt {attempt}/{max_retries})")
@@ -325,6 +344,9 @@ class FileSyncer:
     def rsync_to_server(self, local_path: Path, remote_path: str,
                         excludes: Optional[List[str]] = None) -> bool:
         """Sync local directory to server using rsync over SSH."""
+        if not self.server_config.password:
+            self.logger.error("Password is required for rsync authentication. Set SERVER_PASS or pass --password.")
+            return False
         excludes = excludes or self.config.rsync_excludes
 
         # Build rsync command
@@ -375,6 +397,9 @@ class FileSyncer:
 
     def rsync_from_server(self, remote_path: str, local_path: Path) -> bool:
         """Sync from server to local using rsync."""
+        if not self.server_config.password:
+            self.logger.error("Password is required for rsync authentication. Set SERVER_PASS or pass --password.")
+            return False
         remote_str = f"{self.server_config.user}@{self.server_config.host}:{remote_path}"
         if not remote_str.endswith('/'):
             remote_str += '/'
@@ -858,7 +883,8 @@ Examples:
                         help='Enable verbose logging')
     parser.add_argument('--host', default='10.188.189.205', help='Server hostname/IP')
     parser.add_argument('--user', default='phnh', help='SSH username')
-    parser.add_argument('--password', default='1', help='SSH/sudo password')
+    parser.add_argument('--password', default=os.environ.get("SERVER_PASS") or os.environ.get("SERVER_PASSWORD"),
+                        help='SSH/sudo password (defaults to SERVER_PASS or SERVER_PASSWORD env var)')
     parser.add_argument('--remote-dir', default='/home/phnh/Video-to-Terrain',
                         help='Remote project directory')
     parser.add_argument('--da3-model', default='da3metric-large', help='DA3 model name')
@@ -879,6 +905,17 @@ Examples:
     # Setup logging
     log_level = logging.DEBUG if args.verbose else logging.INFO
     logger = setup_logging(log_level)
+
+    # Prompt or error if password authentication is required without a password
+    if not args.verify_only and not args.password:
+        if sys.stdin.isatty():
+            try:
+                args.password = getpass.getpass("Enter SSH/sudo password: ")
+            except Exception:
+                pass
+        if not args.password:
+            logger.error("Password is required for server deployment. Please set SERVER_PASS environment variable or specify --password.")
+            sys.exit(1)
 
     # Configuration
     server_config = ServerConfig(

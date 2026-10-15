@@ -243,11 +243,21 @@ check_session_age() {
     return 0
 }
 
-# Load cached proxy URL if not provided
+# Load cached or .env proxy URL if not provided
 load_cached_proxy() {
     if [[ -z "$PROXY_URL" && -f "$PROXY_URL_FILE" ]]; then
         PROXY_URL=$(cat "$PROXY_URL_FILE")
         log_info "Using cached proxy URL from $PROXY_URL_FILE"
+    fi
+    if [[ -z "$PROXY_URL" && -f "$PROJECT_DIR/scripts/kaggle/kenv.sh" ]]; then
+        eval "$("$PROJECT_DIR/scripts/kaggle/kenv.sh" 2>/dev/null || true)"
+        if [[ -n "${KAGGLE_PROXY_URL:-}" ]]; then
+            PROXY_URL="$KAGGLE_PROXY_URL"
+            log_info "Using KAGGLE_PROXY_URL from .env"
+        elif [[ -n "${KAGGLE_WITHOUT_INTERNET:-}" ]]; then
+            PROXY_URL="$KAGGLE_WITHOUT_INTERNET"
+            log_info "Using KAGGLE_WITHOUT_INTERNET from .env"
+        fi
     fi
 }
 

@@ -27,7 +27,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-DATASET = "traoanhuy/v3d-small-factory-scene"
+DEFAULT_DATASET = os.environ.get("KAGGLE_DATASET", "traoanhuy/v3d-small-factory-scene")
 
 # Exact files, plus one prefix for the per-object colliders.
 WANTED = [
@@ -73,6 +73,8 @@ def main() -> int:
     ap.add_argument("--with-visual", action="store_true",
                     help="also fetch the 41 MB decimated visual mesh")
     ap.add_argument("--steps", type=int, default=600)
+    ap.add_argument("--dataset", default=DEFAULT_DATASET,
+                    help="Kaggle dataset slug (user/dataset-name)")
     args = ap.parse_args()
 
     if not subprocess.run(["bash", "-lc", "command -v kaggle"],
@@ -84,8 +86,8 @@ def main() -> int:
     out = args.out
     out.mkdir(parents=True, exist_ok=True)
 
-    print(f"listing {DATASET} ...")
-    r = subprocess.run(["kaggle", "datasets", "files", DATASET, "--page-size", "500"],
+    print(f"listing {args.dataset} ...")
+    r = subprocess.run(["kaggle", "datasets", "files", args.dataset, "--page-size", "500"],
                        capture_output=True, text=True, env=env)
     if r.returncode != 0:
         sys.exit(f"kaggle listing failed:\n{r.stdout}\n{r.stderr}")
@@ -106,7 +108,7 @@ def main() -> int:
         if dest.exists() and dest.stat().st_size:
             continue
         dest.parent.mkdir(parents=True, exist_ok=True)
-        rr = subprocess.run(["kaggle", "datasets", "download", DATASET,
+        rr = subprocess.run(["kaggle", "datasets", "download", args.dataset,
                              "-f", n, "-p", str(dest.parent), "--unzip", "--force"],
                             capture_output=True, text=True, env=env)
         if rr.returncode != 0:

@@ -64,7 +64,7 @@ Viewer: `OUTPUT_K/viewer/index.html`, served locally.
 ### Reproduce
 
 ```bash
-cd /Users/traoanhuy/source_code/Full-pipeline-scan-terrain/Videos_to_3D
+cd "<REPO_ROOT>"  # e.g. cd /path/to/Videos_to_3D
 
 python3 scripts/tools/carve_objects.py --no-close-objects \
   --objects obj_0054_machine obj_0180_workbench obj_0179_workbench \

@@ -196,7 +196,7 @@ Holi 3DGS Scene ──► Quality Gate (8-Azimuth Bins) ──► Coverage < 50%
 - **Mesh:** 39.8M TSDF triangles (decimated to 1.5M GLB/OBJ).
 - **Extracted Assets:** 43 decomposed object meshes + 4 doors + 9 shell planes.
 - **Terrain:** $512 \times 510$ grid (0.01183 units/cell), $0.18\%$ hole rate, 16-bit PNG heightfield + top-down photo texture.
-- **Simulation Validation:** Unitree `vr_h3_2` humanoid spawned on optimal flat interior floor (clearance 0.848m, peak $|qvel| = 8.87$, heightfield RMS 5.16mm).
+- **Simulation Validation:** Unitree humanoid spawned on optimal flat interior floor (clearance 0.848m, peak $|qvel| = 8.87$, heightfield RMS 5.16mm).
 - **Dataset Archive:** Kaggle dataset `traoanhuy/v3d-small-factory-scene` (198 files, 4.62 GB).
 
 ---

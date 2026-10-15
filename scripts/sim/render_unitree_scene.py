@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -20,11 +21,21 @@ import mujoco
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
+default_scene = os.environ.get("UNITREE_SCENE_DIR")
+if not default_scene:
+    for candidate in (
+        REPO_ROOT / "outputs" / "robot_sim" / "mujoco",
+        REPO_ROOT / "outputs-full-factory" / "robot_sim" / "mujoco",
+    ):
+        if candidate.is_dir():
+            default_scene = str(candidate)
+            break
+
 parser = argparse.ArgumentParser(description="Render factory scene in MuJoCo")
 parser.add_argument(
     "--scene",
     type=Path,
-    default=Path("/Users/traoanhuy/source_code/test reconstruct_3d/unitree_mujoco_si/unitree_robots/vr_h3_2/origin"),
+    default=Path(default_scene or REPO_ROOT / "outputs" / "robot_sim" / "mujoco"),
     help="Path to origin directory containing scene_factory.xml and scene_factory_report.json",
 )
 parser.add_argument(
@@ -38,6 +49,8 @@ args = parser.parse_args()
 D = args.scene
 OUT = args.out
 OUT.mkdir(parents=True, exist_ok=True)
+if not (D / "scene_factory_report.json").is_file():
+    raise SystemExit(f"No scene found at {D}. Specify --scene or set UNITREE_SCENE_DIR.")
 rep = json.loads((D / "scene_factory_report.json").read_text())
 W, H = 1280, 720
 
@@ -179,7 +192,7 @@ az_r, dist_r, clear_r = best_view([0, 0, 0.9], -12, 3.2)
 print(f"  (robot camera: azimuth {az_r:.0f} has {clear_r:.2f} clear, "
       f"standing off {dist_r:.2f})")
 shot("factory_robot", [0, 0, 0.7], dist_r, az_r, -12,
-     f"vr_h3_2 standing on the reconstructed floor at its home pose. {UNIT}")
+     f"robot standing on the reconstructed floor at its home pose. {UNIT}")
 if part:
     axis, pos, along = part["axis"], part["pos"], part["along"]
     lx = (pos - ox) if axis == "u" else (along - ox)
@@ -224,7 +237,7 @@ for i in range(N):
     im = Image.fromarray(renderer.render())
     dr = ImageDraw.Draw(im)
     dr.rectangle([0, H - 30, W, H], fill=(12, 12, 14))
-    dr.text((10, H - 21), f"reconstructed factory + vr_h3_2 — {UNIT}",
+    dr.text((10, H - 21), f"reconstructed factory + robot — {UNIT}",
             fill=(235, 235, 235))
     im.save(frames / f"f{i:04d}.png")
 mp4 = OUT / "factory_scene_orbit.mp4"

@@ -368,7 +368,7 @@ def stage_robot(robot_dir: Path, out_dir: Path, assets: str) -> Dict:
     origin = robot_dir / "origin"
     name = robot_dir.name
     parts = [f"{name}_rl.xml", f"{name}_sensors.xml", f"{name}_actuators.xml"]
-    # vr_m3_1m6 ships its files under a shortened stem.
+    # Some robot models ship their files under a shortened stem.
     if not (origin / parts[0]).is_file():
         stems = {p.stem.rsplit("_rl", 1)[0] for p in origin.glob("*_rl.xml")}
         if not stems:

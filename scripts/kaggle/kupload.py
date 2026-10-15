@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Upload a local file to a Kaggle kernel in verified chunks.
 
 `kaggle_executor.upload_file` sends one PUT carrying the whole file base64-encoded

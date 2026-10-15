@@ -10,7 +10,7 @@
 # Usage:  eval "$(scripts/kaggle/kenv.sh)"   then use $KAGGLE_WITHOUT_INTERNET etc.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-for key in KAGGLE_WITHOUT_INTERNET KAGGLE_HAS_INTERNET HF_TOKEN; do
+for key in KAGGLE_PROXY_URL KAGGLE_WITHOUT_INTERNET KAGGLE_HAS_INTERNET HF_TOKEN; do
   line="$(grep -m1 "^${key}=" "$ROOT/.env" 2>/dev/null || true)"
   [ -n "$line" ] && printf 'export %s\n' "$line"
 done

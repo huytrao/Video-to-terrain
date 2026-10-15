@@ -3,7 +3,7 @@
 
 Reads what `decompose`/`terrain` produced from the video (`scene_layout.json`, the
 height map, the top-down colour texture) and writes an MJCF alongside the robot so
-`<include>` resolves, in the same shape `vr_h3_2_rl_scene.xml` already uses.
+`<include>` resolves, in the same shape `robot_rl_scene.xml` already uses.
 
 Four things here are decisions rather than mechanics, and each was forced by a
 measurement rather than chosen for tidiness.
@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 from pathlib import Path
 
@@ -210,11 +211,19 @@ def wall_band_mask(walls, h, cell, shape, thresh=0.3, cap=0.45):
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--assets", type=Path, default=ROOT / "outputs" / "robot_sim")
+    default_unitree = os.environ.get("UNITREE_DIR")
+    if not default_unitree:
+        for candidate in (
+            Path.home() / "source_code" / "test reconstruct_3d" / "unitree_mujoco_si",
+            Path("../test reconstruct_3d/unitree_mujoco_si"),
+            Path("../unitree_mujoco_si"),
+        ):
+            if candidate.is_dir():
+                default_unitree = str(candidate)
+                break
     ap.add_argument("--unitree", type=Path,
-                    default=Path("/Users/traoanhuy/source_code/test reconstruct_3d/"
-                                 "unitree_mujoco_si"))
-    ap.add_argument("--robot", default="vr_h3_2")
+                    default=Path(default_unitree or "../unitree_mujoco_si"))
+    ap.add_argument("--robot", default=os.environ.get("ROBOT_NAME", "robot_model"))
     ap.add_argument("--metres-per-unit", type=float, default=1.0)
     ap.add_argument("--objects-as-bodies", action="store_true",
                     help="carve machines out of the terrain and add them as hull "
@@ -243,7 +252,7 @@ def main() -> int:
 
     robot_dir = args.unitree / "unitree_robots" / args.robot / "origin"
     if not robot_dir.is_dir():
-        raise SystemExit(f"no robot directory at {robot_dir}")
+        raise SystemExit(f"no robot directory at {robot_dir}. Specify --unitree or set UNITREE_DIR.")
     inc = [f for f in (f"{args.robot}_rl.xml", f"{args.robot}_sensors.xml",
                        f"{args.robot}_actuators.xml") if (robot_dir / f).exists()]
     if not inc:

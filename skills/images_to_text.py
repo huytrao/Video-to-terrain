@@ -1,10 +1,15 @@
+import os
 import requests
+
+api_key = os.environ.get("NVIDIA_API_KEY")
+if not api_key:
+    raise ValueError("NVIDIA_API_KEY environment variable is required.")
 
 invoke_url = "https://integrate.api.nvidia.com/v1/chat/completions"
 stream = False
 
 headers = {
-    "Authorization": "Bearer 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",
+    "Authorization": f"Bearer {api_key}",
     "Accept": "text/event-stream" if stream else "application/json",
 }
 

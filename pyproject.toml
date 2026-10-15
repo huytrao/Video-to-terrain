@@ -8,7 +8,33 @@ version = "0.1.0"
 description = "Video to metric 3D environments: RGB scan -> physics-ready MuJoCo scene"
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
-license = { text = "Proprietary" }
+license = { text = "MIT" }
+authors = [
+    { name = "Trao An Huy" },
+]
+maintainers = [
+    { name = "Trao An Huy" },
+]
+keywords = [
+    "3d-reconstruction",
+    "robotics",
+    "mujoco",
+    "depth-anything",
+    "gaussian-splatting",
+    "vlm",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Robotics",
+]
 
 # Upper bound on Python is not ours: depth-anything-3 declares
 # requires-python ">=3.9, <=3.13", and the DA3 stages import it in-process.

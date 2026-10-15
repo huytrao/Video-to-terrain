@@ -79,10 +79,23 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--subchunk", type=int, default=24)
     args = ap.parse_args(argv)
 
-    src_proxy = os.environ.get("KAGGLE_INTERNET", "")
-    dst_proxy = os.environ.get("KAGGLE_WITHOUT_INTERNET", "")
+    src_proxy = os.environ.get("KAGGLE_INTERNET") or os.environ.get("KAGGLE_HAS_INTERNET", "")
+    dst_proxy = os.environ.get("KAGGLE_WITHOUT_INTERNET") or os.environ.get("KAGGLE_PROXY_URL", "")
     if not src_proxy or not dst_proxy:
-        sys.exit("ERROR: set KAGGLE_INTERNET and KAGGLE_WITHOUT_INTERNET")
+        env_file = Path(__file__).resolve().parents[2] / ".env"
+        if env_file.exists():
+            import re
+            text = env_file.read_text()
+            if not src_proxy:
+                m = re.search(r"^KAGGLE_HAS_INTERNET=(.*)$", text, re.M) or re.search(r"^KAGGLE_INTERNET=(.*)$", text, re.M)
+                if m:
+                    src_proxy = m.group(1).strip()
+            if not dst_proxy:
+                m = re.search(r"^KAGGLE_WITHOUT_INTERNET=(.*)$", text, re.M) or re.search(r"^KAGGLE_PROXY_URL=(.*)$", text, re.M)
+                if m:
+                    dst_proxy = m.group(1).strip()
+    if not src_proxy or not dst_proxy:
+        sys.exit("ERROR: set KAGGLE_INTERNET (or KAGGLE_HAS_INTERNET) and KAGGLE_WITHOUT_INTERNET (or KAGGLE_PROXY_URL) in environment or .env")
 
     wanted = {
         name: size

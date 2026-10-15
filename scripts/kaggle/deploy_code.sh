@@ -16,9 +16,12 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 
-eval "$(scripts/kaggle/kenv.sh)"
-: "${KAGGLE_WITHOUT_INTERNET:?not in .env}"
-export KAGGLE_PROXY_URL="$KAGGLE_WITHOUT_INTERNET"
+if [[ -z "${KAGGLE_PROXY_URL:-}" ]]; then
+  eval "$(scripts/kaggle/kenv.sh 2>/dev/null || true)"
+  KAGGLE_PROXY_URL="${KAGGLE_PROXY_URL:-${KAGGLE_WITHOUT_INTERNET:-}}"
+fi
+: "${KAGGLE_PROXY_URL:?KAGGLE_PROXY_URL (or KAGGLE_WITHOUT_INTERNET) must be set in environment or .env}"
+export KAGGLE_PROXY_URL
 
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT

@@ -7,7 +7,7 @@
     "terrain_type": "plane"
   },
   "robot": {
-    "config_import": "vinrobotics_mjlab.assets.robots.vr_m3_1.vr_m3_1_constants:get_vr_m3_1_implicit_actuator_robot_cfg",
+    "config_import": "mjlab.assets.robots.generic_biped.biped_constants:get_biped_implicit_actuator_robot_cfg",
     "spawn": {
       "robot_name": "pelvis",
       "spawn_height": 1.0,
@@ -88,7 +88,7 @@
   },
   "policy": {
     "policy_type": "tracking",
-    "task_config": "vinrobotics_mjlab.tasks.tracking.config.vr_m3_1.env_cfgs:vr_m3_1_flat_tracking_env_cfg",
+    "task_config": "mjlab.tasks.tracking.config.generic_biped.env_cfgs:biped_flat_tracking_env_cfg",
     "root_body": "pelvis",
     "torso_body": "waist_yaw_link",
     "tracked_bodies": [

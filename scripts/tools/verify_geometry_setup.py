@@ -3,6 +3,7 @@
 Local verification script for Video-to-Terrain geometry pipeline.
 Run this to verify local environment before deploying to Kaggle.
 """
+import os
 import sys
 import subprocess
 import importlib
@@ -40,11 +41,17 @@ def check_pytorch_cuda():
 def check_da3_import():
     """Check DA3 import works."""
     # Add local DA3 path
-    da3_paths = [
-        Path("/Users/traoanhuy/source_code/Full-pipeline-scan-terrain/depth-anything-3/src"),
+    env_da3 = os.environ.get("DA3_PATH") or os.environ.get("DA3_REPO")
+    repo_root = Path(__file__).resolve().parents[2]
+    candidate_paths = [
+        Path(env_da3) if env_da3 else None,
+        repo_root.parent / "depth-anything-3" / "src",
+        repo_root / "depth-anything-3" / "src",
         Path("depth-anything-3/src"),
         Path("../depth-anything-3/src"),
+        Path.home() / "source_code/Full-pipeline-scan-terrain/depth-anything-3/src",
     ]
+    da3_paths = [p for p in candidate_paths if p is not None]
 
     for p in da3_paths:
         if p.exists():

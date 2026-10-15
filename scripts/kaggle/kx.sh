@@ -40,7 +40,7 @@ if [ -z "${KAGGLE_PROXY_URL:-}" ]; then
     has|build|fetch) want=KAGGLE_HAS_INTERNET ;;
     *) echo "kx: KX_KERNEL must be 'without' or 'has', got '${KX_KERNEL}'" >&2; exit 2 ;;
   esac
-  KAGGLE_PROXY_URL="$(eval "$("$HERE/kenv.sh")"; printf '%s' "${!want:-}")"
+  KAGGLE_PROXY_URL="$(eval "$("$HERE/kenv.sh")"; printf '%s' "${!want:-${KAGGLE_PROXY_URL:-}}")"
   export KAGGLE_PROXY_URL
 fi
 if [ -z "${KAGGLE_PROXY_URL:-}" ]; then
@@ -50,7 +50,7 @@ if [ -z "${KAGGLE_PROXY_URL:-}" ]; then
   export KAGGLE_PROXY_URL
 fi
 if [ -z "${KAGGLE_PROXY_URL:-}" ]; then
-  echo "kx: no KAGGLE_PROXY_URL; set it, or put ${want:-KAGGLE_WITHOUT_INTERNET} in $ROOT/.env" >&2
+  echo "kx: no KAGGLE_PROXY_URL; set it, or put KAGGLE_PROXY_URL (or ${want:-KAGGLE_WITHOUT_INTERNET}) in $ROOT/.env" >&2
   exit 2
 fi
 

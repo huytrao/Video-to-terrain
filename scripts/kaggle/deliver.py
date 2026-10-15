@@ -33,7 +33,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-KX = ROOT / "scripts" / "kx.sh"
+KX = ROOT / "scripts" / "kaggle" / "kx.sh"
 
 
 def kx(kernel: str, *args: str) -> str:
@@ -224,18 +224,19 @@ def main() -> int:
     print("\n--- 2. relaying RUN -> BUILD (bytes never touch this laptop) ---")
     env = dict(os.environ)
     # relay_pull needs both proxies: KAGGLE_INTERNET is the puller (BUILD).
-    kenv = subprocess.run([str(ROOT / "scripts" / "kenv.sh")],
+    kenv = subprocess.run([str(ROOT / "scripts" / "kaggle" / "kenv.sh")],
                           capture_output=True, text=True, cwd=str(ROOT))
     for line in kenv.stdout.splitlines():
         m = re.match(r"export ([A-Z_]+)=(.*)$", line.strip())
         if m:
             env[m.group(1)] = m.group(2)
-    env["KAGGLE_INTERNET"] = env.get("KAGGLE_HAS_INTERNET", "")
+    env["KAGGLE_INTERNET"] = env.get("KAGGLE_INTERNET") or env.get("KAGGLE_HAS_INTERNET", "")
+    env["KAGGLE_WITHOUT_INTERNET"] = env.get("KAGGLE_WITHOUT_INTERNET") or env.get("KAGGLE_PROXY_URL", "")
     if not env["KAGGLE_INTERNET"] or not env.get("KAGGLE_WITHOUT_INTERNET"):
-        sys.exit("deliver: both KAGGLE_HAS_INTERNET and KAGGLE_WITHOUT_INTERNET "
-                 "must be set in .env")
+        sys.exit("deliver: both KAGGLE_HAS_INTERNET (or KAGGLE_INTERNET) and KAGGLE_WITHOUT_INTERNET (or KAGGLE_PROXY_URL) "
+                 "must be set in environment or .env")
     proc = subprocess.run(
-        [sys.executable, str(ROOT / "scripts" / "relay_pull.py"),
+        [sys.executable, str(ROOT / "scripts" / "kaggle" / "relay_pull.py"),
          "relay_out/deliver.tar.gz", "--dest", "/tmp/deliver.tar.gz"],
         cwd=str(ROOT), env=env, capture_output=True, text=True,
     )

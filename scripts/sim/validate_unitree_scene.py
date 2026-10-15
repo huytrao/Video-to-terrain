@@ -21,6 +21,7 @@ separately.
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -31,9 +32,19 @@ try:
 except ImportError:
     sys.exit("validate: mujoco is not installed")
 
-D = Path(sys.argv[1] if len(sys.argv) > 1 else
-         "/Users/traoanhuy/source_code/test reconstruct_3d/unitree_mujoco_si/"
-         "unitree_robots/vr_h3_2/origin")
+default_scene = os.environ.get("UNITREE_SCENE_DIR")
+if not default_scene:
+    for candidate in (
+        Path("outputs/robot_sim/mujoco"),
+        Path("outputs-full-factory/robot_sim/mujoco"),
+    ):
+        if candidate.is_dir():
+            default_scene = str(candidate)
+            break
+
+D = Path(sys.argv[1] if len(sys.argv) > 1 else (default_scene or "outputs/robot_sim/mujoco"))
+if not (D / "scene_factory.xml").is_file():
+    sys.exit(f"validate: scene not found at {D}. Pass path as argument or set UNITREE_SCENE_DIR.")
 XML = D / "scene_factory.xml"
 rep = json.loads((D / "scene_factory_report.json").read_text())
 hm = np.load(D / "scene_factory_terrain.npy")

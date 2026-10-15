@@ -1,11 +1,27 @@
 # Secrets — NEVER commit
 .env
 .env.*
+.env*.local
 !.env.example
+!**/.env.example
 .backup/
-# Local AI-assistant notes, not part of the deliverable
+
+# Proprietary Robot Hardware Assets & Model Weights — NEVER COMMIT / PUSH
+**/vinrobotics*
+**/vr_h3*
+**/vr_m3*
+**/Robot_code*
+**/deploy_robot*
+*.onnx
+*.pt
+*.pth
+*.bin
+# Local AI-assistant notes & session state, not part of the deliverable
 context.txt
 CONTEXT_CODEX.md
+docs/state/SESSION_STATE.txt
+docs/state/input_prompt.txt
+docs/state/*.txt
 # holds a plaintext Kaggle API key
 kaggle_upload_example.py
 **/kaggle.json
@@ -14,16 +30,26 @@ kaggle_upload_example.py
 # (KAGGLE_WITHOUT_INTERNET / KAGGLE_HAS_INTERNET); this is the local fallback.
 server-connect.txt
 
-# Python
+# Python & tooling caches
 __pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
+*.so
+.Python
 .venv/
 venv/
 env/
 .pytest_cache/
+**/.pytest_cache/
 .mypy_cache/
+**/.mypy_cache/
 .ruff_cache/
+**/.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.cache/
 
 # ClaudeKit / Claude local
 .claude/local/
@@ -44,7 +70,9 @@ node_modules/
 # Logs. MuJoCo writes MUJOCO_LOG.TXT next to wherever it is invoked, and the
 # capitalised .TXT means *.log does not catch it.
 *.log
+**/*.log
 MUJOCO_LOG.TXT
+**/MUJOCO_LOG.TXT
 
 # Input scans and benchmark deliverables: hundreds of MB to several GB of media
 # that is produced or downloaded, not authored. input/ keeps its README and

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Factory scene — carved objects with gravity</title>
+<title>Factory Scene Physics Simulation — Trảo An Huy (VinUniversity)</title>
 <style>
   :root { color-scheme: dark; --ink:#e8e8ea; --dim:#9a9aa2; --line:#2c2c34; --accent:#7dd3a0; }
   * { box-sizing: border-box; }
@@ -39,8 +39,9 @@
 <body>
 <div id="stage"></div>
 <div id="panel">
-  <h1>Factory scene — 8 vật rời</h1>
-  <div class="sub">Kéo để nhấc · thả để rơi</div>
+  <div style="font-size:10px; color:var(--dim); letter-spacing:.04em; text-transform:uppercase; margin-bottom:6px; border-bottom:1px solid var(--line); padding-bottom:5px;">Trảo An Huy · VinUniversity</div>
+  <h1>Factory Scene — 8 Vật rời Tương tác</h1>
+  <div class="sub">Tương tác kéo-thả · BVH Raycasting va chạm thời gian thực</div>
   <div class="row"><span>khối lượng / vật</span><span id="m-mass">10.0 kg</span></div>
   <div class="row"><span>trọng lực</span><span id="m-grav">9.81 m/s²</span></div>
   <div class="row"><span>mặt sàn</span><span id="m-floor">—</span></div>
@@ -52,8 +53,10 @@
   <ul id="list"></ul>
   <button id="reset">Đưa tất cả về chỗ cũ</button>
   <a id="done" href="../objects3d/index.html">3 vật hoàn thiện (Hunyuan3D) →</a>
+  <a style="display:block; width:100%; margin-top:6px; padding:6px; text-align:center; background:#1d1d24; color:var(--accent); border:1px solid var(--line); border-radius:7px; font-size:11px; text-decoration:none;" href="../full_factory/index.html">Full Factory Showcase (38 vật) →</a>
+  <a style="display:block; width:100%; margin-top:5px; padding:5px; text-align:center; background:#1d1d24; color:var(--dim); border:1px solid var(--line); border-radius:7px; font-size:10.5px; text-decoration:none;" href="../index.html">← Về Báo cáo chính</a>
 </div>
-<div id="hint">chuột trái kéo vật · chuột phải/kéo nền để xoay · lăn để zoom</div>
+<div id="hint">Chuột trái: kéo/thả vật · Chuột phải / kéo nền: xoay góc nhìn · Con lăn: zoom</div>
 <div id="load">đang nạp scene…</div>
 
 <script type="importmap">

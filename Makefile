@@ -64,7 +64,10 @@ test-pytest:  ## Same tests through pytest (needs `make install-all`)
 lint:  ## Ruff check (needs `make install-all`)
 	$(PY) -m ruff check src scripts tests
 
-verify:  ## Check CUDA / torch / v3d import health on this machine
+verify:  ## Run comprehensive verification suite (tests, static scan, imports)
+	$(PY) tests/run_all_checks.py
+
+verify-geometry:  ## Check CUDA / torch / v3d import health on this machine
 	$(PY) scripts/tools/verify_geometry_setup.py
 
 # --- remote GPU -------------------------------------------------------------
@@ -82,20 +85,27 @@ SCENE ?= outputs-full-factory/robot_sim
 # --- room + robot ----------------------------------------------------------
 # The reconstruction is Z-down and its mesh is a shell, so neither gravity nor
 # collision works until both are fixed. ROOM_ROBOT points at a unitree_robots/<name>
-# directory; without it the scene still builds, with the control sphere only.
+# directory holding origin/ and meshes/; without it the scene still builds, with the
+# control sphere only. Set ROOM_ROBOT=<path> or ROBOT_DIR in environment.
 ROOM       ?= outputs-full-factory/delivery/OUTPUT_B1/mesh/room_300k.glb
 ROOM_GT    ?= outputs-full-factory/delivery/OUTPUT_B1/metadata/ground_truth_boxes.json
-ROOM_OUT   ?= outputs-full-factory/delivery/OUTPUT_ROOM
-ROOM_ROBOT ?= /Users/traoanhuy/source_code/deploy_robot/unitree_mujoco_si/unitree_robots/vr_h3_2
+ROOM_ROBOT ?= $(or $(ROBOT_DIR),$(wildcard ./robot_assets))
 
 room-scene:  ## Room mesh + robot -> textured MJCF, physics-checked and rendered
 	$(PY) scripts/sim/make_room_scene.py \
-	  --room $(ROOM) --gt $(ROOM_GT) --out $(ROOM_OUT) --robot $(ROOM_ROBOT)
+	  --room $(ROOM) --gt $(ROOM_GT) --out $(ROOM_OUT) $(if $(ROOM_ROBOT),--robot $(ROOM_ROBOT),)
 
-POLICY ?= /Users/traoanhuy/source_code/Robot_code/vinrobotics-vr_h3_2/logs/rsl_rl/exported/policy_12000.onnx
+# POLICY points to an exported ONNX policy (e.g. from RSL-RL).
+# Set POLICY=<path> or ROBOT_POLICY in environment, or override on the command line.
+POLICY ?= $(or $(ROBOT_POLICY),$(wildcard ./policies/policy.onnx))
 CMD    ?= 0 0 0
 
 room-play:  ## Run an exported RSL-RL policy in the room (CMD="vx vy wz", default stand)
+	@if [ -z "$(POLICY)" ]; then \
+	  echo "Error: POLICY is not set and no default policy ONNX found."; \
+	  echo "Specify POLICY=<path/to/policy.onnx> or set ROBOT_POLICY in environment."; \
+	  exit 1; \
+	fi
 	$(PY) scripts/sim/play_policy.py --scene $(ROOM_OUT)/room_scene.xml \
 	  --policy $(POLICY) --command $(CMD) --seconds 10 \
 	  --render $(ROOM_OUT)/policy_play.png
@@ -115,6 +125,11 @@ video-index:  ## Rebuild just visualize/videos.html
 PORT ?= 8080
 
 room-serve:  ## Render the policy run to video and serve it at http://127.0.0.1:$(PORT)
+	@if [ -z "$(POLICY)" ]; then \
+	  echo "Error: POLICY is not set and no default policy ONNX found."; \
+	  echo "Specify POLICY=<path/to/policy.onnx> or set ROBOT_POLICY in environment."; \
+	  exit 1; \
+	fi
 	$(PY) scripts/sim/serve_room.py --scene $(ROOM_OUT)/room_scene.xml \
 	  --policy $(POLICY) --command $(CMD) --port $(PORT)
 
@@ -129,6 +144,9 @@ sim-validate:  ## Physics settling / penetration audit on the built scene
 
 sim-render:  ## Render inspection stills and a 360 orbit mp4
 	$(PY) scripts/sim/render_unitree_scene.py --scene $(SCENE)/mujoco --out $(SCENE)/videos
+
+presentation-serve:  ## Serve the Twin Data Presentation at http://localhost:8080
+	$(PY) -m http.server 8080 --directory output/Twin_Data_Presentation
 
 # --- housekeeping -----------------------------------------------------------
 

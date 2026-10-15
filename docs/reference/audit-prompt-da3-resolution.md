@@ -1,6 +1,6 @@
 Independent correctness audit. You are NOT the model that wrote this code — your value is catching what its author could not see. Read-only: do not edit anything.
 
-Repository: `/Users/traoanhuy/source_code/Full-pipeline-scan-terrain/Videos_to_3D ` — the directory name ends with a SPACE, so quote every path.
+Repository: `<REPO_ROOT>` (e.g. `Full-pipeline-scan-terrain/Videos_to_3D`) — ensure paths are quoted if spaces are present.
 
 Do NOT read `.env`, `server-connect.txt`, or anything under `~/.codex/` — they hold live credentials. Do not open binaries (`.ply`, `.npy`, `.JPG`, `.safetensors`, `.tar`) and never print base64.
 

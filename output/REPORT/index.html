@@ -179,8 +179,8 @@
 <body>
 
 <div class="topbar">
-  <span class="wordmark">Trảo An Huy · Thực tập sinh Reinforcement Learning</span>
-  <span class="badge">Sprint 3 · gần 2 tuần</span>
+  <span class="wordmark">Trảo An Huy (Trao An Huy) · VinUniversity · Reinforcement Learning &amp; 3D Vision</span>
+  <span class="badge">Sprint 3 · Nghiên cứu &amp; Phát triển</span>
 </div>
 
 <div class="deck" id="deck">
@@ -188,11 +188,11 @@
   <!-- 1: Giới thiệu -->
   <section class="slide active">
     <div class="slide-inner">
-      <span class="sprint-badge">Sprint 3 · gần 2 tuần</span>
+      <span class="sprint-badge">Sprint 3 · Nghiên cứu &amp; Phát triển</span>
       <p class="eyebrow">01 · Vấn đề</p>
       <h1>Video điện thoại → Twin Digital Data</h1>
-      <p class="lede" style="margin-top:10px; font-size:14px;">Trảo An Huy · Thực tập sinh Reinforcement Learning
-        · dưới sự hướng dẫn của anh Nguyễn Doãn Hoàng</p>
+      <p class="lede" style="margin-top:10px; font-size:14px;"><strong>Trảo An Huy (Trao An Huy)</strong> · Kỹ sư nghiên cứu / Thực tập sinh RL, VinUniversity
+        · Cố vấn hướng dẫn: <strong>Nguyễn Doãn Hoàng</strong></p>
       <p class="lede">Biến video RGB quay bằng điện thoại thành dữ liệu 3D có cấu trúc, đủ đơn vị,
         có kiểm chứng — để dùng cho Reinforcement Learning, và tạo thành một kho dữ liệu (data store)
         sẵn sàng để xử lý tiếp.</p>
@@ -415,10 +415,10 @@
 
       <div style="margin-top:24px; width:100%; border-top:1px solid var(--line); padding-top:20px;">
         <p class="eyebrow">Ví dụ 2 · RGBD tự thu — thiếu vùng khi quét</p>
-        <p class="lede" style="text-align:left; max-width:900px; margin-left:0;">Video RGBD tự thu dưới đây là dữ liệu thật:
-          khi quét, luôn có vùng bị thiếu (che khuất, giới hạn cảm biến, chưa đi hết góc). Đây chính là vấn đề
-          Coverage Analysis (giai đoạn 5) phát hiện, rồi Completion bằng Hunyuan3D (giai đoạn 6) sinh mesh bù —
-          không phải bịa lại toàn bộ vật, chỉ bù đúng phần bị thiếu.</p>
+        <p class="lede" style="text-align:left; max-width:900px; margin-left:0;">Video RGBD tự thu dưới đây là dữ liệu thực nghiệm:
+          khi quét thực địa, luôn xuất hiện vùng bị khuyết thiếu (che khuất hình học, giới hạn góc nhìn cảm biến). Đây chính là vấn đề mà
+          Coverage Analysis (giai đoạn 5) định lượng, sau đó quy trình Completion bằng Hunyuan3D (giai đoạn 6) bổ sung mesh —
+          không phải tái tạo võ đoán (hallucinate) toàn bộ vật thể, mà chỉ bù đắp chính xác phần hình học bị che khuất.</p>
         <figure class="comparison-video" style="margin-left:0;">
           <video src="media/rgbd_capture_gap.mp4" autoplay muted loop playsinline preload="auto" controls></video>
           <figcaption><strong>RGBD tự thu · vùng thiếu khi quét.</strong> Vấn đề thật, giải quyết bằng chính pipeline này.</figcaption>
@@ -451,6 +451,7 @@
         <p class="lede" style="margin-top:10px; font-size:13px;">Cùng object package này, có thể <strong>config vật lý</strong>
           (khối lượng, va chạm) rồi <strong>kéo/di chuyển</strong> vật thể trực tiếp trong scene — và dùng để dựng một
           <strong>kho đồ vật 3D</strong> tái sử dụng cho nhiều cảnh khác, không phải dựng lại từ đầu mỗi lần.
+          <a href="full_factory/index.html" target="_blank" rel="noopener"><strong>Full Factory Showcase (38 vật) ↗</strong></a> ·
           <a href="viewer/index.html" target="_blank" rel="noopener">Scene tương tác ↗</a> ·
           <a href="objects3d/index.html" target="_blank" rel="noopener">Kho đồ vật 3D ↗</a></p>
       </div>
@@ -502,9 +503,14 @@
           </ul>
         </div>
       </div>
+      <div style="margin-top:20px; font-size:13px; color:var(--gray); text-align:center;">
+        Công trình nghiên cứu &amp; phát triển bởi <strong>Trảo An Huy (Trao An Huy)</strong> — VinUniversity · Hướng dẫn: <strong>Nguyễn Doãn Hoàng</strong>
+      </div>
       <div class="close-links">
         <a href="#" data-goto-slide="0">← Về đầu</a>
-        <a href="viewer/index.html" target="_blank" rel="noopener">Scene tương tác ↗</a>
+        <a href="full_factory/index.html" target="_blank" rel="noopener">Full Factory Showcase (38 vật) ↗</a>
+        <a href="viewer/index.html" target="_blank" rel="noopener">Scene tương tác vật lý ↗</a>
+        <a href="objects3d/index.html" target="_blank" rel="noopener">Kho đồ vật 3D hoàn thiện ↗</a>
       </div>
     </div>
   </section>

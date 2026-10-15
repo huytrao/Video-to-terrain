@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -249,9 +250,17 @@ PAGE = """<!doctype html>
 def main() -> None:
     ap = argparse.ArgumentParser(description="Collect every visualizable output")
     ap.add_argument("--out", type=Path, default=Path("visualize"))
+    default_policy = os.environ.get("ROBOT_POLICY") or os.environ.get("POLICY")
+    if not default_policy:
+        for candidate in (
+            Path("policies/policy.onnx"),
+            Path("policy.onnx"),
+        ):
+            if candidate.is_file():
+                default_policy = str(candidate)
+                break
     ap.add_argument("--policy", type=Path,
-                    default=Path("/Users/traoanhuy/source_code/Robot_code/"
-                                 "vinrobotics-vr_h3_2/logs/rsl_rl/exported/policy_12000.onnx"))
+                    default=Path(default_policy or os.environ.get("ROBOT_POLICY", "policy.onnx")))
     ap.add_argument("--trim", type=float, default=7.0,
                     help="cut every video to its first N seconds; 0 keeps them whole")
     ap.add_argument("--no-render", action="store_true",

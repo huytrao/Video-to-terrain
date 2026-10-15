@@ -19,6 +19,7 @@ import argparse
 import heapq
 import json
 import math
+import os
 import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -176,9 +177,17 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Walk the policy on a tour of the room")
     ap.add_argument("--scene", type=Path,
                     default=Path("outputs-full-factory/delivery/OUTPUT_ROOM/room_scene.xml"))
+    default_policy = os.environ.get("ROBOT_POLICY") or os.environ.get("POLICY")
+    if not default_policy:
+        for candidate in (
+            Path("policies/policy.onnx"),
+            Path("policy.onnx"),
+        ):
+            if candidate.is_file():
+                default_policy = str(candidate)
+                break
     ap.add_argument("--policy", type=Path,
-                    default=Path("/Users/traoanhuy/source_code/Robot_code/"
-                                 "vinrobotics-vr_h3_2/logs/rsl_rl/exported/policy_12000.onnx"))
+                    default=Path(default_policy or os.environ.get("ROBOT_POLICY", "policy.onnx")))
     ap.add_argument("--deploy", type=Path, default=None)
     ap.add_argument("--seconds", type=float, default=30.0)
     ap.add_argument("--waypoints", type=int, default=4)

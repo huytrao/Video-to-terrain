@@ -95,7 +95,7 @@ python scripts/kaggle_relay.py https://huggingface.co/path/to/weights.safetensor
   --workers 4
 ```
 
-For advanced transfer techniques and measured throughput benchmarks, see [references/KERNEL_TO_KERNEL_TRANSFER.md](file:///Users/traoanhuy/source_code/Full-pipeline-scan-terrain/Videos_to_3D/kaggle-runtime-toolkit-agent-skills/references/KERNEL_TO_KERNEL_TRANSFER.md).
+For advanced transfer techniques and measured throughput benchmarks, see [references/KERNEL_TO_KERNEL_TRANSFER.md](kaggle-runtime-toolkit-agent-skills/references/KERNEL_TO_KERNEL_TRANSFER.md).
 
 ---
 
@@ -103,10 +103,10 @@ For advanced transfer techniques and measured throughput benchmarks, see [refere
 
 | Script | Purpose |
 | :--- | :--- |
-| [`scripts/kaggle_executor.py`](file:///Users/traoanhuy/source_code/Full-pipeline-scan-terrain/Videos_to_3D/kaggle-runtime-toolkit-agent-skills/scripts/kaggle_executor.py) | Executes Python snippets and scripts via Jupyter WebSocket, streams live logs, and manages kernels. |
-| [`scripts/kaggle_remote.py`](file:///Users/traoanhuy/source_code/Full-pipeline-scan-terrain/Videos_to_3D/kaggle-runtime-toolkit-agent-skills/scripts/kaggle_remote.py) | Opens interactive PTY terminals (`shell`, `attach`, `terminals`) and handles file transfers. |
-| [`scripts/kaggle_relay.py`](file:///Users/traoanhuy/source_code/Full-pipeline-scan-terrain/Videos_to_3D/kaggle-runtime-toolkit-agent-skills/scripts/kaggle_relay.py) | Streams files between online and offline kernels via parallel Contents API PUTs. |
-| [`scripts/kx.sh`](file:///Users/traoanhuy/source_code/Full-pipeline-scan-terrain/Videos_to_3D/kaggle-runtime-toolkit-agent-skills/scripts/kx.sh) | Execution wrapper with exponential backoff and automatic retry on transient proxy disconnects. |
+| [`scripts/kaggle_executor.py`](kaggle-runtime-toolkit-agent-skills/scripts/kaggle_executor.py) | Executes Python snippets and scripts via Jupyter WebSocket, streams live logs, and manages kernels. |
+| [`scripts/kaggle_remote.py`](kaggle-runtime-toolkit-agent-skills/scripts/kaggle_remote.py) | Opens interactive PTY terminals (`shell`, `attach`, `terminals`) and handles file transfers. |
+| [`scripts/kaggle_relay.py`](kaggle-runtime-toolkit-agent-skills/scripts/kaggle_relay.py) | Streams files between online and offline kernels via parallel Contents API PUTs. |
+| [`scripts/kx.sh`](kaggle-runtime-toolkit-agent-skills/scripts/kx.sh) | Execution wrapper with exponential backoff and automatic retry on transient proxy disconnects. |
 
 ---
 

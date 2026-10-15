@@ -225,8 +225,28 @@ print("DONE in %ds" % (time.time() - t0))
 
 def _env(name: str) -> str:
     v = os.environ.get(name, "")
+    if not v and name in ("KAGGLE_INTERNET", "KAGGLE_HAS_INTERNET"):
+        v = os.environ.get("KAGGLE_INTERNET", "") or os.environ.get("KAGGLE_HAS_INTERNET", "")
+    if not v and name in ("KAGGLE_WITHOUT_INTERNET", "KAGGLE_PROXY_URL"):
+        v = os.environ.get("KAGGLE_WITHOUT_INTERNET", "") or os.environ.get("KAGGLE_PROXY_URL", "")
     if not v:
-        sys.exit(f"ERROR: {name} not set.")
+        env_file = Path(__file__).resolve().parents[2] / ".env"
+        if env_file.exists():
+            import re
+            text = env_file.read_text()
+            m = re.search(rf"^{name}=(.*)$", text, re.M)
+            if m:
+                v = m.group(1).strip()
+            elif name in ("KAGGLE_INTERNET", "KAGGLE_HAS_INTERNET"):
+                m2 = re.search(r"^KAGGLE_HAS_INTERNET=(.*)$", text, re.M) or re.search(r"^KAGGLE_INTERNET=(.*)$", text, re.M)
+                if m2:
+                    v = m2.group(1).strip()
+            elif name in ("KAGGLE_WITHOUT_INTERNET", "KAGGLE_PROXY_URL"):
+                m2 = re.search(r"^KAGGLE_WITHOUT_INTERNET=(.*)$", text, re.M) or re.search(r"^KAGGLE_PROXY_URL=(.*)$", text, re.M)
+                if m2:
+                    v = m2.group(1).strip()
+    if not v:
+        sys.exit(f"ERROR: {name} not set in environment or .env.")
     return v
 
 

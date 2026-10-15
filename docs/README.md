@@ -13,12 +13,8 @@ Four folders, split by what you want from a document rather than who wrote it.
 
 | Document | Contents |
 | :--- | :--- |
-| [initial-setup.md](architecture/initial-setup.md) | **The founding brief.** Defines stages A–I, the `StructuredScene` abstraction, the visual-vs-collision rule, the output contract, and the agent roster. Everything else here descends from it. |
-| [pipeline-overview.md](architecture/pipeline-overview.md) | High-level walkthrough of the stages A–J |
-| [architecture-graph.md](architecture/architecture-graph.md) | Dataflow graphs, sequence diagrams, coordinate maps |
-| [pipeline-spec.md](architecture/pipeline-spec.md) | Formal per-stage schemas and coordinate contracts |
-| [complete-pipeline-roadmap.md](architecture/complete-pipeline-roadmap.md) | End-to-end dependency roadmap between stages |
-| [architecture-critique.md](architecture/architecture-critique.md) | Critique of the current design and the factory rework |
+| [architecture-graph.md](architecture/architecture-graph.md) | **System Architecture & Technical Dataflow**: End-to-end pipeline stages (A–J), collision explosion resolution via RANSAC plane separation & footprint carving, 2.5D heightfield doorway wall-slab synthesis, real-to-sim validation with humanoid robot & RSL-RL policies, Kaggle offline GPU bridge sequence, coordinate frame chirality ($\det(R)=+1$), and package architecture (`src/v3d/`). |
+| [architecture-critique.md](architecture/architecture-critique.md) | **Architecture Critique & Industrial Rework**: In-depth analysis of structural bottlenecks (scale provenance, missing manifest validation, feedback-free semantic chains, uncalibrated meshes) and blueprint for industrial factory digital twins. |
 
 ## guides/ — how to run a given thing
 
@@ -31,6 +27,7 @@ Four folders, split by what you want from a document rather than who wrote it.
 | [room-to-robot-scene.md](guides/room-to-robot-scene.md) | `make room-scene`: room mesh + Unitree robot -> a textured MuJoCo scene with correct gravity, a real collider, and two physics checks |
 | [obb-anchored-segmentation.md](guides/obb-anchored-segmentation.md) | Cutting objects out accurately for Hunyuan3D: prompting SAM 3 with the metric OBB instead of a text label, the six traps, and the runbook |
 | [production-checklist.md](guides/production-checklist.md) | Production readiness gates |
+| [text-to-terrain-integration.md](guides/text-to-terrain-integration.md) | Text-to-Terrain integration guide: Generative synthesis, 2.5D heightfield `<hfield>` physics, and co-spawning with reconstructed factories for robot stress-tests |
 
 ## reference/ — facts, and how they were learned
 

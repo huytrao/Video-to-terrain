@@ -5,7 +5,7 @@ Thư mục này chứa script và tài liệu để tải các scenes từ bộ 
 ---
 
 ## 1. Yêu cầu trước khi tải
-1. Token Hugging Face đã được lưu trong file [`.env`](file:///Users/traoanhuy/source_code/Full-pipeline-scan-terrain/Videos_to_3D/.env) ở thư mục gốc:
+1. Token Hugging Face đã được lưu trong file [`.env`](.env) ở thư mục gốc:
    ```env
    HF_TOKEN=hf_...
    ```

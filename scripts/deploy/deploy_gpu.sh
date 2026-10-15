@@ -10,10 +10,19 @@ set -euo pipefail
 # =============================================================================
 # CONFIGURATION
 # =============================================================================
-SERVER_USER="phnh"
-SERVER_HOST="10.188.189.205"
-SERVER_PASS="1"
-SERVER_DIR="/home/phnh/Video-to-Terrain"
+SERVER_USER="${SERVER_USER:-phnh}"
+SERVER_HOST="${SERVER_HOST:-10.188.189.205}"
+SERVER_DIR="${SERVER_DIR:-/home/phnh/Video-to-Terrain}"
+
+# Resolve server password from SERVER_PASS or SERVER_PASSWORD, prompt if interactive, or require it
+SERVER_PASS="${SERVER_PASS:-${SERVER_PASSWORD:-}}"
+if [[ -z "${SERVER_PASS}" ]]; then
+    if [[ -t 0 ]]; then
+        read -s -p "Enter server password: " SERVER_PASS
+        echo
+    fi
+fi
+SERVER_PASS="${SERVER_PASS:?"SERVER_PASS environment variable required"}"
 # This script lives at scripts/deploy/; the project root is two levels up.
 LOCAL_PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CONDA_ENV_NAME="v2t-gpu"
@@ -88,7 +97,7 @@ main() {
 
     # Step 1: Verify local input video exists
     log_info "Step 1: Verifying local input video..."
-    INPUT_VIDEO="${LOCAL_PROJECT_DIR}/input/20260810_150244_color.mp4"
+    INPUT_VIDEO="${INPUT_VIDEO:-${LOCAL_PROJECT_DIR}/input/20260810_150244_color.mp4}"
     if [[ ! -f "${INPUT_VIDEO}" ]]; then
         log_error "Input video not found: ${INPUT_VIDEO}"
         exit 1
